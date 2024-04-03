@@ -1,0 +1,16 @@
+manifestVersion: subsquid.io/v0.1
+name: evm-template
+version: 1
+description: |-
+  The very first evm squid from manifest  
+build:
+
+deploy:
+  addons:
+    postgres:
+  processor:
+    cmd: [ "sqd", "process:prod" ]
+    env:
+      RPC_ENDPOINT: ${{ secrets.RPC_ENDPOINT }}
+  api:
+    cmd: [ "sqd", "serve:prod" ]
