@@ -1,1 +1,5 @@
-export * from "./burn.model"
+export * from "./projectAttestation.model"
+export * from "./attesterOrganisation.model"
+export * from "./attester.model"
+export * from "./organisation.model"
+export * from "./project.model"

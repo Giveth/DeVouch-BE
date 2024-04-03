@@ -1,7 +1,49 @@
-type Burn @entity {
+type ProjectAttestation @entity {
+  "UID of the attestation"
   id: ID!
-  block: Int!
-  address: String! @index
-  value: BigInt!
+  attester: String!
+  value: Boolean!
+  organization: String!
   txHash: String!
+  revoked: Boolean!
+}
+
+type AttesterOrganisation @entity {
+  "UID of the attestation made the relationship"
+  id: ID!
+  attester: Attester!
+  organisation: Organisation!
+  "Timestamp at which the relationship was created"
+  attestTimestamp: DateTime!
+  revoked: Boolean!
+}
+
+type Attester @entity {
+  "Attester ID - account address"
+  id: ID!
+  "Attester Organization"
+  organizations: [AttesterOrganisation!]! @derivedFrom(field: "attester")
+}
+
+type Organisation @entity {
+  "Organization ID"
+  id: ID!
+  "Organization Name"
+  name: String! @index @unique
+  "Organization Address"
+  schemaUid: String!
+  "Schema field holding the authorized user account address"
+  schemaUserField: String!
+  "Organization Attesters"
+  attesters: [AttesterOrganisation!]! @derivedFrom(field: "organisation")
+}
+
+type Project @entity {
+  "Project ID"
+  id: ID!
+  verifyingTrue: Int!
+  verifyingFalse: Int!
+  givbackEligibleTrue: Int!
+  givbackEligibleFalse: Int!
+  lastUpdatedTimestamp: DateTime!
 }

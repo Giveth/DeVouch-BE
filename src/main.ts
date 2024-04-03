@@ -1,29 +1,21 @@
-import {TypeormDatabase} from '@subsquid/typeorm-store'
-import {Burn} from './model'
-import {processor} from './processor'
+import { TypeormDatabase } from "@subsquid/typeorm-store";
+import { processor } from "./processor";
+import * as EASContract from "./abi/EAS";
+import { processAttest } from "./mappings/attest";
+import { processRevokeLog } from "./mappings/revoke";
 
-processor.run(new TypeormDatabase({supportHotBlocks: true}), async (ctx) => {
-    const burns: Burn[] = []
-    for (let c of ctx.blocks) {
-        for (let tx of c.transactions) {
-            // decode and normalize the tx data
-            burns.push(
-                new Burn({
-                    id: tx.id,
-                    block: c.header.height,
-                    address: tx.from,
-                    value: tx.value,
-                    txHash: tx.hash,
-                })
-            )
-        }
+processor.run(new TypeormDatabase({ supportHotBlocks: true }), async (ctx) => {
+  for (let _block of ctx.blocks) {
+    for (let _log of _block.logs) {
+      console.log("-----------------------------------");
+      switch (_log.topics[0]) {
+        case EASContract.events.Attested.topic:
+          await processAttest(ctx, _log);
+          break;
+
+        case EASContract.events.Revoked.topic:
+          await processRevokeLog(ctx, _log);
+      }
     }
-    // apply vectorized transformations and aggregations
-    const burned = burns.reduce((acc, b) => acc + b.value, 0n) / 1_000_000_000n
-    const startBlock = ctx.blocks.at(0)?.header.height
-    const endBlock = ctx.blocks.at(-1)?.header.height
-    ctx.log.info(`Burned ${burned} Gwei from ${startBlock} to ${endBlock}`)
-
-    // upsert batches of entities with batch-optimized ctx.store.save
-    await ctx.store.upsert(burns)
-})
+  }
+});
