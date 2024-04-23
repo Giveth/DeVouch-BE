@@ -2,7 +2,9 @@ const fs = require("fs");
 exports.default = function createOrganisationAddMigration(
   organisationName,
   schemaId,
-  schemaUserField
+  schemaUserField,
+  authorizedAttester,
+  color = null
 ) {
   const timestamp = new Date().getTime();
   const fileName = `${timestamp}-Add${organisationName}.js`;
@@ -19,7 +21,15 @@ module.exports = class ${className} {
     async up(db) {
         // add organisation with name "${organisationName}" and schema id "${schemaId}"
         await db.query(
-        \`INSERT INTO "organisation" ("id", "name", "schema_uid", "schema_user_field") VALUES ('${organisationKey.toLocaleLowerCase()}', '${organisationName}', '${schemaId.toLocaleLowerCase()}', '${schemaUserField}')\`
+        \`INSERT INTO "organisation" ("id", "name", "schema_uid", "schema_user_field", "issuer", "color") 
+          VALUES (
+            '${organisationKey.toLocaleLowerCase()}',
+            '${organisationName}',
+            '${schemaId.toLocaleLowerCase()}',
+            '${schemaUserField}',
+            '${authorizedAttester.toLocaleLowerCase()}',
+            ${color ? "'" + color.toLocaleLowerCase() + "'" : null}
+          )\`
         );
     }
     

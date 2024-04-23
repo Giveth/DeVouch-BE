@@ -33,6 +33,18 @@ export class Organisation {
     schemaUserField!: string
 
     /**
+     * Issuing authority address
+     */
+    @Column_("text", {nullable: false})
+    issuer!: string
+
+    /**
+     * Color of the organization
+     */
+    @Column_("text", {nullable: true})
+    color!: string | undefined | null
+
+    /**
      * Organization Attesters
      */
     @OneToMany_(() => AttesterOrganisation, e => e.organisation)

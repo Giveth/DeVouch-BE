@@ -7,7 +7,6 @@ import { processRevokeLog } from "./mappings/revoke";
 processor.run(new TypeormDatabase({ supportHotBlocks: true }), async (ctx) => {
   for (let _block of ctx.blocks) {
     for (let _log of _block.logs) {
-      console.log("-----------------------------------");
       switch (_log.topics[0]) {
         case EASContract.events.Attested.topic:
           await processAttest(ctx, _log);

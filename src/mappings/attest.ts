@@ -20,7 +20,11 @@ export async function processAttest(
   ctx: DataHandlerContext<Store>,
   log: Log
 ): Promise<void> {
-  const { uid, schema: schemaUid } = EASContract.events.Attested.decode(log);
+  const {
+    uid,
+    schema: schemaUid,
+    attester: issuer,
+  } = EASContract.events.Attested.decode(log);
   const easContract = new EASContract.Contract(
     ctx,
     log.block,
@@ -41,11 +45,11 @@ export async function processAttest(
 
     default:
       const organisation = await ctx.store.findOneBy(Organisation, {
-        schemaUid,
+        schemaUid: schemaUid.toLocaleLowerCase(),
+        issuer: issuer.toLocaleLowerCase(),
       });
 
       if (!organisation) break;
-
       const { data } = await easContract.getAttestation(uid);
       const schema = await schemaContract.getSchema(schemaUid);
       const schemaEncoder = new SchemaEncoder(schema.schema);

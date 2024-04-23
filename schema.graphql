@@ -1,11 +1,11 @@
 type ProjectAttestation @entity {
   "UID of the attestation"
   id: ID!
-  attester: String!
   value: Boolean!
-  organization: String!
   txHash: String!
   revoked: Boolean!
+  attesterOrganisation: AttesterOrganisation!
+  project: Project!
 }
 
 type AttesterOrganisation @entity {
@@ -34,6 +34,10 @@ type Organisation @entity {
   schemaUid: String!
   "Schema field holding the authorized user account address"
   schemaUserField: String!
+  "Issuing authority address"
+  issuer: String!
+  "Color of the organization"
+  color: String
   "Organization Attesters"
   attesters: [AttesterOrganisation!]! @derivedFrom(field: "organisation")
 }
@@ -41,9 +45,12 @@ type Organisation @entity {
 type Project @entity {
   "Project ID"
   id: ID!
-  verifyingTrue: Int!
-  verifyingFalse: Int!
-  givbackEligibleTrue: Int!
-  givbackEligibleFalse: Int!
+  "Total attests with value True"
+  totalVouches: Int!
+  "Total attests with value False"
+  totalFlags: Int!
+  # givbackEligibleTrue: Int!
+  # givbackEligibleFalse: Int!
   lastUpdatedTimestamp: DateTime!
+  attests: [ProjectAttestation!]! @derivedFrom(field: "project")
 }
