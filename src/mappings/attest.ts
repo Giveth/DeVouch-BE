@@ -15,6 +15,7 @@ import {
   SCHEMA_CONTRACT_ADDRESS,
 } from "../constants";
 import { Attester, Organisation, AttesterOrganisation } from "../model";
+import { authorizeAttestation } from "../controllers/authorizeAttestation";
 
 export async function processAttest(
   ctx: DataHandlerContext<Store>,
@@ -44,42 +45,6 @@ export async function processAttest(
       break;
 
     default:
-      const organisation = await ctx.store.findOneBy(Organisation, {
-        schemaUid: schemaUid.toLocaleLowerCase(),
-        issuer: issuer.toLocaleLowerCase(),
-      });
-
-      if (!organisation) break;
-      const { data } = await easContract.getAttestation(uid);
-      const schema = await schemaContract.getSchema(schemaUid);
-      const schemaEncoder = new SchemaEncoder(schema.schema);
-      const decodedData = schemaEncoder.decodeData(data);
-      console.log("Decoded data:", decodedData);
-      const accountAddress = decodedData
-        .find((i) => i.name === organisation.schemaUserField)
-        ?.value.value.toString()
-        .toLocaleLowerCase();
-
-      if (!accountAddress) {
-        ctx.log.error(`Account address not found for on attestation ${uid}`);
-        break;
-      }
-
-      let attester = await ctx.store.get(Attester, accountAddress);
-
-      if (!attester) {
-        attester = new Attester({ id: accountAddress });
-        await ctx.store.upsert([attester]);
-      }
-
-      await ctx.store.upsert([
-        new AttesterOrganisation({
-          id: uid,
-          attester,
-          organisation,
-          revoked: false,
-          attestTimestamp: new Date(log.block.timestamp * 1000),
-        }),
-      ]);
+      await authorizeAttestation(ctx, log);
   }
 }
