@@ -1,4 +1,3 @@
-import { assertNotNull } from "@subsquid/util-internal";
 import { lookupArchive } from "@subsquid/archive-registry";
 import {
   BlockHeader,
@@ -10,8 +9,6 @@ import {
 } from "@subsquid/evm-processor";
 import { TypeormDatabase } from "@subsquid/typeorm-store";
 import dotenv from "dotenv";
-import { EAS_CONTRACT_ADDRESS } from "../constants";
-import * as EASContract from "./../abi/EAS";
 
 dotenv.config({
   path: ".env.test",
@@ -28,4 +25,6 @@ export type Log = _Log<Fields>;
 export type Transaction = _Transaction<Fields>;
 export type ProcessorContext<Store> = DataHandlerContext<Store, Fields>;
 
-processor.run(new TypeormDatabase({ supportHotBlocks: true }), async () => {});
+// processor.run(new TypeormDatabase({ supportHotBlocks: true }), async () => {
+//   console.log("Test processor is running");
+// });
