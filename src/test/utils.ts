@@ -28,6 +28,7 @@ export async function getEntityManager(): Promise<EntityManager> {
 export async function closeConnection() {
   if (connection) {
     await connection.destroy();
+    connection = undefined;
   }
 }
 
