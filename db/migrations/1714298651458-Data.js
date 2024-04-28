@@ -1,5 +1,5 @@
-module.exports = class Data1713880684484 {
-    name = 'Data1713880684484'
+module.exports = class Data1714298651458 {
+    name = 'Data1714298651458'
 
     async up(db) {
         await db.query(`CREATE TABLE "attester" ("id" character varying NOT NULL, CONSTRAINT "PK_9a4a4be6c9c1431b0bcb10919ea" PRIMARY KEY ("id"))`)
@@ -8,7 +8,7 @@ module.exports = class Data1713880684484 {
         await db.query(`CREATE TABLE "attester_organisation" ("id" character varying NOT NULL, "attest_timestamp" TIMESTAMP WITH TIME ZONE NOT NULL, "revoked" boolean NOT NULL, "attester_id" character varying, "organisation_id" character varying, CONSTRAINT "PK_c442cbdb1cb06fee10880999cb1" PRIMARY KEY ("id"))`)
         await db.query(`CREATE INDEX "IDX_781187b47d99696907c61a05b4" ON "attester_organisation" ("attester_id") `)
         await db.query(`CREATE INDEX "IDX_37dcdd599bcce866cf9cfd64cf" ON "attester_organisation" ("organisation_id") `)
-        await db.query(`CREATE TABLE "project" ("id" character varying NOT NULL, "total_vouches" integer NOT NULL, "total_flags" integer NOT NULL, "last_updated_timestamp" TIMESTAMP WITH TIME ZONE NOT NULL, CONSTRAINT "PK_4d68b1358bb5b766d3e78f32f57" PRIMARY KEY ("id"))`)
+        await db.query(`CREATE TABLE "project" ("id" character varying NOT NULL, "source" text NOT NULL, "project_id" text NOT NULL, "title" text, "description" text, "total_vouches" integer NOT NULL, "total_flags" integer NOT NULL, "last_updated_timestamp" TIMESTAMP WITH TIME ZONE NOT NULL, CONSTRAINT "PK_4d68b1358bb5b766d3e78f32f57" PRIMARY KEY ("id"))`)
         await db.query(`CREATE TABLE "project_attestation" ("id" character varying NOT NULL, "value" boolean NOT NULL, "tx_hash" text NOT NULL, "revoked" boolean NOT NULL, "attester_organisation_id" character varying, "project_id" character varying, CONSTRAINT "PK_b54887e7eb9193e705303c2b0a0" PRIMARY KEY ("id"))`)
         await db.query(`CREATE INDEX "IDX_7fa07b250bfd14884fe9d530e5" ON "project_attestation" ("attester_organisation_id") `)
         await db.query(`CREATE INDEX "IDX_1082147528db937cb5b50fb2a0" ON "project_attestation" ("project_id") `)

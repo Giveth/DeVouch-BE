@@ -43,8 +43,16 @@ type Organisation @entity {
 }
 
 type Project @entity {
-  "Project ID"
+  "Project Source and Project ID separated by a hyphen"
   id: ID!
+  "Source of the project"
+  source: String!
+  "Project ID. Unique within the source"
+  projectId: String!
+  "Title of the project"
+  title: String
+  "Description of the project"
+  description: String
   "Total attests with value True"
   totalVouches: Int!
   "Total attests with value False"

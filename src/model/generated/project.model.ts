@@ -8,10 +8,34 @@ export class Project {
     }
 
     /**
-     * Project ID
+     * Project Source and Project ID separated by a hyphen
      */
     @PrimaryColumn_()
     id!: string
+
+    /**
+     * Source of the project
+     */
+    @Column_("text", {nullable: false})
+    source!: string
+
+    /**
+     * Project ID. Unique within the source
+     */
+    @Column_("text", {nullable: false})
+    projectId!: string
+
+    /**
+     * Title of the project
+     */
+    @Column_("text", {nullable: true})
+    title!: string | undefined | null
+
+    /**
+     * Description of the project
+     */
+    @Column_("text", {nullable: true})
+    description!: string | undefined | null
 
     /**
      * Total attests with value True
