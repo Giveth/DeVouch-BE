@@ -10,9 +10,8 @@ describe("simple storage", () => {
   test("sample authorized attest", async () => {
     const ctx = await getCtx();
     const organization = new Organisation({
-      id: "id",
+      id: "schemaUid",
       name: "name",
-      schemaUid: "schemaUid",
       issuer: "issuer",
       schemaUserField: "schemaUserField",
     });

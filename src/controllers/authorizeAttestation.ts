@@ -15,15 +15,15 @@ export const handleAuthorize = async (
   } = EASContract.events.Attested.decode(log);
 
   const organisation = await ctx.store.findOneBy(Organisation, {
-    schemaUid: schemaUid.toLocaleLowerCase(),
+    id: schemaUid.toLocaleLowerCase(),
     issuer: issuer.toLocaleLowerCase(),
   });
 
   if (!organisation) return; // No organisation found for this schema
 
-  const decodedData = await getAttestationData(ctx, log.block, uid, schemaUid);
+  ctx.log.debug(`Processing authorize attestation with uid: ${uid}`);
 
-  console.log("Decoded data:", decodedData);
+  const decodedData = await getAttestationData(ctx, log.block, uid, schemaUid);
 
   const accountAddress = decodedData
     .find((i) => i.name === organisation.schemaUserField)
@@ -35,20 +35,23 @@ export const handleAuthorize = async (
     return;
   }
 
-  let attestor = await ctx.store.get(Attestor, accountAddress);
+  const attestor = new Attestor({ id: accountAddress });
+  await ctx.store.upsert([attestor]);
 
-  if (!attestor) {
-    attestor = new Attestor({ id: accountAddress });
-    await ctx.store.upsert([attestor]);
-  }
+  const key = `${accountAddress}-${organisation.id}`;
 
-  await ctx.store.upsert([
-    new AttestorOrganisation({
-      id: uid,
-      attestor,
-      organisation,
-      revoked: false,
-      attestTimestamp: new Date(log.block.timestamp * 1000),
-    }),
-  ]);
+  let attestorOrganisation: AttestorOrganisation = new AttestorOrganisation({
+    id: key,
+    attestor,
+    organisation,
+    uid,
+    revoked: false,
+    attestTimestamp: new Date(log.block.timestamp),
+  });
+
+  ctx.store.upsert(attestorOrganisation);
+
+  ctx.log.debug(
+    `Attestor ${accountAddress} authorized for organisation ${organisation.name}: ${attestorOrganisation}`
+  );
 };

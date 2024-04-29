@@ -11,8 +11,9 @@ type ProjectAttestation @entity {
 }
 
 type AttestorOrganisation @entity {
-  "UID of the attestation made the relationship"
   id: ID!
+  "UID of the attestation made the relationship"
+  uid: String!
   attestor: Attestor!
   organisation: Organisation!
   "Timestamp at which the relationship was created"
@@ -28,12 +29,10 @@ type Attestor @entity {
 }
 
 type Organisation @entity {
-  "Organization ID"
+  "Organization schema UID"
   id: ID!
   "Organization Name"
   name: String! @index @unique
-  "Organization Address"
-  schemaUid: String!
   "Schema field holding the authorized user account address"
   schemaUserField: String!
   "Issuing authority address"

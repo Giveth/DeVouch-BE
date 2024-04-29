@@ -1,15 +1,14 @@
 
-module.exports = class AddTrace1714397333376 {
-    name = "AddTrace1714397333376";
+module.exports = class AddTrace1714407470983 {
+    name = "AddTrace1714407470983";
     
     async up(db) {
         // add organisation with name "Trace" and schema id "0x2e22df9a11e06c306ed8f64ca45ceae02efcf8a443371395a78371bc4fb6f722"
         await db.query(
-        `INSERT INTO "organisation" ("id", "name", "schema_uid", "schema_user_field", "issuer", "color") 
+        `INSERT INTO "organisation" ("id", "name", "schema_user_field", "issuer", "color") 
           VALUES (
-            'trace',
-            'Trace',
             '0x2e22df9a11e06c306ed8f64ca45ceae02efcf8a443371395a78371bc4fb6f722',
+            'Trace',
             'account',
             '0xf23ea0b5f14afcbe532a1df273f7b233ebe41c78',
             '#ff0000'
@@ -20,7 +19,7 @@ module.exports = class AddTrace1714397333376 {
     async down(db) {
         // remove organisation with name "Trace" and schema id "0x2e22df9a11e06c306ed8f64ca45ceae02efcf8a443371395a78371bc4fb6f722"
         await db.query(
-        `DELETE FROM "organisation" WHERE "id" = 'trace'`
+        `DELETE FROM "organisation" WHERE "id" = '0x2e22df9a11e06c306ed8f64ca45ceae02efcf8a443371395a78371bc4fb6f722'`
         );
     }
 };

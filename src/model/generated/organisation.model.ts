@@ -8,7 +8,7 @@ export class Organisation {
     }
 
     /**
-     * Organization ID
+     * Organization schema UID
      */
     @PrimaryColumn_()
     id!: string
@@ -19,12 +19,6 @@ export class Organisation {
     @Index_({unique: true})
     @Column_("text", {nullable: false})
     name!: string
-
-    /**
-     * Organization Address
-     */
-    @Column_("text", {nullable: false})
-    schemaUid!: string
 
     /**
      * Schema field holding the authorized user account address

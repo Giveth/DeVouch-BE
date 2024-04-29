@@ -11,11 +11,11 @@ export const checkProjectAttestation = async (
   issuer: string
 ): Promise<AttestorOrganisation | undefined> => {
   const organisation = await ctx.store.findOneBy(Organisation, {
-    schemaUid: attestorGroup.toLocaleLowerCase(),
+    id: attestorGroup.toLocaleLowerCase(),
   });
 
   if (!organisation) {
-    ctx.log.info(
+    ctx.log.debug(
       `Organisation not found for schemaUid: ${attestorGroup} in project verification attestation - skipped`
     );
     return;
@@ -26,7 +26,7 @@ export const checkProjectAttestation = async (
   });
 
   if (!attestor) {
-    ctx.log.info(
+    ctx.log.debug(
       `Attestor not found for issuer: ${issuer} in project verification attestation - skipped`
     );
     return;

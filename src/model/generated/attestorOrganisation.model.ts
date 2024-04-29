@@ -8,11 +8,14 @@ export class AttestorOrganisation {
         Object.assign(this, props)
     }
 
+    @PrimaryColumn_()
+    id!: string
+
     /**
      * UID of the attestation made the relationship
      */
-    @PrimaryColumn_()
-    id!: string
+    @Column_("text", {nullable: false})
+    uid!: string
 
     @Index_()
     @ManyToOne_(() => Attestor, {nullable: true})

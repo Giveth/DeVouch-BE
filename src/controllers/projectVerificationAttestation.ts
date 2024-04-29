@@ -37,12 +37,8 @@ export const handleProjectAttestation = async (
     return;
   }
 
-  console.log(
-    "Project Verification Attestation:",
-    projectVerificationAttestation
-  );
-
   for (const attestorGroup of projectVerificationAttestation.attestorGroup) {
+    ctx.log.debug(`Processing project attestation with uid: ${uid}`);
     // Check if the attestor is part of the organisation
     const attestorOrganisation = await checkProjectAttestation(
       ctx,
@@ -50,10 +46,8 @@ export const handleProjectAttestation = async (
       issuer
     );
 
-    console.log("attestorOrganisation: ", attestorOrganisation);
-
     if (!attestorOrganisation) {
-      ctx.log.info(
+      ctx.log.debug(
         `Attestor ${issuer} is not part of the organisation ${attestorGroup} in project verification attestation - skipped`
       );
       break;
@@ -75,19 +69,21 @@ export const handleProjectAttestation = async (
 
     const { vouchOrFlag, comment } = projectVerificationAttestation;
 
-    await ctx.store.upsert(
-      new ProjectAttestation({
-        id: uid,
-        vouchOrFlag,
-        txHash: log.getTransaction().hash,
-        project,
-        attestorOrganisation,
-        comment: comment,
-        attestTimestamp: new Date(log.block.timestamp),
-        revoked: false,
-      })
-    );
-    updateProjectAttestationCounts(ctx, project);
+    const projectAttestation = new ProjectAttestation({
+      id: uid,
+      vouchOrFlag,
+      txHash: log.getTransaction().hash,
+      project,
+      attestorOrganisation,
+      comment: comment,
+      attestTimestamp: new Date(log.block.timestamp),
+      revoked: false,
+    });
+
+    await ctx.store.upsert(projectAttestation);
+    ctx.log.debug(`Upserted project attestation ${projectAttestation}`);
+
+    await updateProjectAttestationCounts(ctx, project);
   }
 };
 
@@ -104,13 +100,15 @@ export const handleProjectAttestationRevoke = async (
     },
   });
 
+  ctx.log.debug(`Processing project attestation revokation with uid: ${uid}`);
   if (!attestation) {
-    ctx.log.info(`Project attestation not found for uid: ${uid}`);
+    ctx.log.debug(`Project attestation not found for uid: ${uid}`);
     return;
   }
 
   attestation.revoked = true;
   await ctx.store.upsert(attestation);
+  ctx.log.debug(`Revoked project attestation ${attestation}`);
 
   await updateProjectAttestationCounts(ctx, attestation.project);
 };
