@@ -2,19 +2,17 @@ import { DataHandlerContext, Log } from "@subsquid/evm-processor";
 import { Store } from "@subsquid/typeorm-store";
 import * as EASContract from "../abi/EAS";
 import { getAttestationData } from "./utils/easHelper";
-import { ProjectVerificationAttestation } from "./utils/easTypes";
-import { SchemaDecodedItem } from "@ethereum-attestation-service/eas-sdk";
-import { SafeParseReturnType } from "zod";
+import { ProjectAttestation } from "../model";
 import {
-  Attestor,
-  AttestorOrganisation,
-  Organisation,
-  Project,
-  ProjectAttestation,
-} from "../model";
-import { updateProjectAttestationCounts } from "./utils/modelHelper";
+  getProject,
+  updateProjectAttestationCounts,
+} from "./utils/modelHelper";
+import {
+  checkProjectAttestation,
+  parseAttestationData,
+} from "./utils/projectVerificationHelper";
 
-export const projectVeriricationAttestation = async (
+export const handleProjectAttestation = async (
   ctx: DataHandlerContext<Store>,
   log: Log
 ): Promise<void> => {
@@ -27,7 +25,7 @@ export const projectVeriricationAttestation = async (
   const decodedData = await getAttestationData(ctx, log.block, uid, schemaUid);
 
   const { success, data: projectVerificationAttestation } =
-    parseData(decodedData);
+    parseAttestationData(decodedData);
 
   if (!success) {
     ctx.log.error(`Error parsing project verification attestation
@@ -46,7 +44,7 @@ export const projectVeriricationAttestation = async (
 
   for (const attestorGroup of projectVerificationAttestation.attestorGroup) {
     // Check if the attestor is part of the organisation
-    const attestorOrganisation = await verifyAttestation(
+    const attestorOrganisation = await checkProjectAttestation(
       ctx,
       attestorGroup,
       issuer
@@ -93,111 +91,26 @@ export const projectVeriricationAttestation = async (
   }
 };
 
-const getProject = async (
+export const handleProjectAttestationRevoke = async (
   ctx: DataHandlerContext<Store>,
-  source: string,
-  projectId: string
-): Promise<Project> => {
-  const id = `${source.toLocaleLowerCase()}-${projectId}`;
-
-  let project: Project | undefined = await ctx.store.get(Project, id);
-
-  if (!project) {
-    await ctx.store.upsert(
-      new Project({
-        id,
-        source: source.toLocaleLowerCase(),
-        projectId,
-        totalVouches: 0,
-        totalFlags: 0,
-        lastUpdatedTimestamp: new Date(),
-      })
-    );
-    project = await ctx.store.findOneBy(Project, { id });
-  }
-
-  return project as Project;
-};
-const verifyAttestation = async (
-  ctx: DataHandlerContext<Store>,
-  attestorGroup: string,
-  issuer: string
-): Promise<AttestorOrganisation | undefined> => {
-  const organisation = await ctx.store.findOneBy(Organisation, {
-    schemaUid: attestorGroup.toLocaleLowerCase(),
+  uid: string
+) => {
+  const attestation = await ctx.store.findOne(ProjectAttestation, {
+    relations: {
+      project: true,
+    },
+    where: {
+      id: uid,
+    },
   });
 
-  if (!organisation) {
-    ctx.log.info(
-      `Organisation not found for schemaUid: ${attestorGroup} in project verification attestation - skipped`
-    );
+  if (!attestation) {
+    ctx.log.info(`Project attestation not found for uid: ${uid}`);
     return;
   }
 
-  const attestor = await ctx.store.findOneBy(Attestor, {
-    id: issuer.toLocaleLowerCase(),
-  });
+  attestation.revoked = true;
+  await ctx.store.upsert(attestation);
 
-  if (!attestor) {
-    ctx.log.info(
-      `Attestor not found for issuer: ${issuer} in project verification attestation - skipped`
-    );
-    return;
-  }
-
-  // Check if the attestor is part of the organisation
-  const attestorOrganisation = await ctx.store.findOneBy(AttestorOrganisation, {
-    attestor,
-    organisation,
-  });
-
-  return attestorOrganisation;
-};
-
-const parseData = (
-  decodedData: SchemaDecodedItem[]
-): SafeParseReturnType<any, ProjectVerificationAttestation> => {
-  let vouchOrFlag: boolean;
-  let projectSource: string;
-  let projectId: string;
-  let attestorGroup: string[];
-  let comment: string;
-
-  for (const item of decodedData) {
-    const value = item.value.value;
-    switch (item.name) {
-      case "vouchOrFlag":
-        vouchOrFlag = value as boolean;
-        break;
-      case "projectSource":
-        projectSource = value as string;
-        break;
-      case "projectId":
-        projectId = value as string;
-        break;
-      case "attestorGroup":
-        attestorGroup = Object.values(value).map((v) => v.toString());
-        break;
-      case "comment":
-        comment = value as string;
-        break;
-    }
-  }
-
-  const projectVerificationAttestation: ProjectVerificationAttestation = {
-    // @ts-ignore
-    vouchOrFlag,
-    // @ts-ignore
-    projectSource,
-    // @ts-ignore
-    projectId,
-    // @ts-ignore
-    attestorGroup,
-    // @ts-ignore
-    comment,
-  };
-
-  return ProjectVerificationAttestation.safeParse(
-    projectVerificationAttestation
-  );
+  await updateProjectAttestationCounts(ctx, attestation.project);
 };

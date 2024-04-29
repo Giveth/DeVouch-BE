@@ -1,0 +1,90 @@
+import { DataHandlerContext, Log } from "@subsquid/evm-processor";
+import { Store } from "@subsquid/typeorm-store";
+import { ProjectVerificationAttestation } from "./easTypes";
+import { SchemaDecodedItem } from "@ethereum-attestation-service/eas-sdk";
+import { SafeParseReturnType } from "zod";
+import { Attestor, AttestorOrganisation, Organisation } from "../../model";
+
+export const checkProjectAttestation = async (
+  ctx: DataHandlerContext<Store>,
+  attestorGroup: string,
+  issuer: string
+): Promise<AttestorOrganisation | undefined> => {
+  const organisation = await ctx.store.findOneBy(Organisation, {
+    schemaUid: attestorGroup.toLocaleLowerCase(),
+  });
+
+  if (!organisation) {
+    ctx.log.info(
+      `Organisation not found for schemaUid: ${attestorGroup} in project verification attestation - skipped`
+    );
+    return;
+  }
+
+  const attestor = await ctx.store.findOneBy(Attestor, {
+    id: issuer.toLocaleLowerCase(),
+  });
+
+  if (!attestor) {
+    ctx.log.info(
+      `Attestor not found for issuer: ${issuer} in project verification attestation - skipped`
+    );
+    return;
+  }
+
+  // Check if the attestor is part of the organisation
+  const attestorOrganisation = await ctx.store.findOneBy(AttestorOrganisation, {
+    attestor,
+    organisation,
+  });
+
+  return attestorOrganisation;
+};
+
+export const parseAttestationData = (
+  decodedData: SchemaDecodedItem[]
+): SafeParseReturnType<any, ProjectVerificationAttestation> => {
+  let vouchOrFlag: boolean;
+  let projectSource: string;
+  let projectId: string;
+  let attestorGroup: string[];
+  let comment: string;
+
+  for (const item of decodedData) {
+    const value = item.value.value;
+    switch (item.name) {
+      case "vouchOrFlag":
+        vouchOrFlag = value as boolean;
+        break;
+      case "projectSource":
+        projectSource = value as string;
+        break;
+      case "projectId":
+        projectId = value as string;
+        break;
+      case "attestorGroup":
+        attestorGroup = Object.values(value).map((v) => v.toString());
+        break;
+      case "comment":
+        comment = value as string;
+        break;
+    }
+  }
+
+  const projectVerificationAttestation: ProjectVerificationAttestation = {
+    // @ts-ignore
+    vouchOrFlag,
+    // @ts-ignore
+    projectSource,
+    // @ts-ignore
+    projectId,
+    // @ts-ignore
+    attestorGroup,
+    // @ts-ignore
+    comment,
+  };
+
+  return ProjectVerificationAttestation.safeParse(
+    projectVerificationAttestation
+  );
+};

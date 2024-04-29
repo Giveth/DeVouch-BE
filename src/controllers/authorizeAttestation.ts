@@ -4,7 +4,7 @@ import { Attestor, AttestorOrganisation, Organisation } from "../model";
 import * as EASContract from "../abi/EAS";
 import { getAttestationData } from "./utils/easHelper";
 
-export const authorizeAttestation = async (
+export const handleAuthorize = async (
   ctx: DataHandlerContext<Store>,
   log: Log
 ) => {

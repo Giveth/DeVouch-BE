@@ -23,11 +23,34 @@ export const updateProjectAttestationCounts = async (
     }),
   ]);
 
-  console.log("vouchCount:", vouchCount);
-  console.log("flagCount:", flagCount);
-
   project.totalVouches = vouchCount;
   project.totalFlags = flagCount;
 
   await ctx.store.upsert(project);
+};
+
+export const getProject = async (
+  ctx: DataHandlerContext<Store>,
+  source: string,
+  projectId: string
+): Promise<Project> => {
+  const id = `${source.toLocaleLowerCase()}-${projectId}`;
+
+  let project: Project | undefined = await ctx.store.get(Project, id);
+
+  if (!project) {
+    await ctx.store.upsert(
+      new Project({
+        id,
+        source: source.toLocaleLowerCase(),
+        projectId,
+        totalVouches: 0,
+        totalFlags: 0,
+        lastUpdatedTimestamp: new Date(),
+      })
+    );
+    project = await ctx.store.findOneBy(Project, { id });
+  }
+
+  return project as Project;
 };
