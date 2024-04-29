@@ -3,7 +3,7 @@ exports.default = function createOrganisationAddMigration(
   organisationName,
   schemaId,
   schemaUserField,
-  authorizedAttester,
+  authorizedAttestor,
   color = null
 ) {
   const timestamp = new Date().getTime();
@@ -27,7 +27,7 @@ module.exports = class ${className} {
             '${organisationName}',
             '${schemaId.toLocaleLowerCase()}',
             '${schemaUserField}',
-            '${authorizedAttester.toLocaleLowerCase()}',
+            '${authorizedAttestor.toLocaleLowerCase()}',
             ${color ? "'" + color.toLocaleLowerCase() + "'" : null}
           )\`
         );

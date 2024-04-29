@@ -4,7 +4,7 @@ import * as EASContract from "./abi/EAS";
 import { processAttest } from "./mappings/attest";
 import { processRevokeLog } from "./mappings/revoke";
 
-processor.run(new TypeormDatabase({ supportHotBlocks: true }), async (ctx) => {
+processor.run(new TypeormDatabase({ supportHotBlocks: false }), async (ctx) => {
   for (let _block of ctx.blocks) {
     for (let _log of _block.logs) {
       switch (_log.topics[0]) {

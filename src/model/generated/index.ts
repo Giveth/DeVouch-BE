@@ -1,5 +1,5 @@
 export * from "./projectAttestation.model"
-export * from "./attesterOrganisation.model"
-export * from "./attester.model"
+export * from "./attestorOrganisation.model"
+export * from "./attestor.model"
 export * from "./organisation.model"
 export * from "./project.model"

@@ -1,10 +1,8 @@
-import { SchemaEncoder } from "@ethereum-attestation-service/eas-sdk";
 import { DataHandlerContext, Log } from "@subsquid/evm-processor";
 import { Store } from "@subsquid/typeorm-store";
-import { Attester, AttesterOrganisation, Organisation } from "../model";
+import { Attestor, AttestorOrganisation, Organisation } from "../model";
 import * as EASContract from "../abi/EAS";
-import * as SchemaContract from "../abi/Schema";
-import { EAS_CONTRACT_ADDRESS, SCHEMA_CONTRACT_ADDRESS } from "../constants";
+import { getAttestationData } from "./utils/easHelper";
 
 export const authorizeAttestation = async (
   ctx: DataHandlerContext<Store>,
@@ -13,7 +11,7 @@ export const authorizeAttestation = async (
   const {
     uid,
     schema: schemaUid,
-    attester: issuer,
+    attestor: issuer,
   } = EASContract.events.Attested.decode(log);
 
   const organisation = await ctx.store.findOneBy(Organisation, {
@@ -23,21 +21,7 @@ export const authorizeAttestation = async (
 
   if (!organisation) return; // No organisation found for this schema
 
-  const easContract = new EASContract.Contract(
-    ctx,
-    log.block,
-    EAS_CONTRACT_ADDRESS
-  );
-  const schemaContract = new SchemaContract.Contract(
-    ctx,
-    log.block,
-    SCHEMA_CONTRACT_ADDRESS
-  );
-
-  const { data } = await easContract.getAttestation(uid);
-  const schema = await schemaContract.getSchema(schemaUid);
-  const schemaEncoder = new SchemaEncoder(schema.schema);
-  const decodedData = schemaEncoder.decodeData(data);
+  const decodedData = await getAttestationData(ctx, log.block, uid, schemaUid);
 
   console.log("Decoded data:", decodedData);
 
@@ -51,17 +35,17 @@ export const authorizeAttestation = async (
     return;
   }
 
-  let attester = await ctx.store.get(Attester, accountAddress);
+  let attestor = await ctx.store.get(Attestor, accountAddress);
 
-  if (!attester) {
-    attester = new Attester({ id: accountAddress });
-    await ctx.store.upsert([attester]);
+  if (!attestor) {
+    attestor = new Attestor({ id: accountAddress });
+    await ctx.store.upsert([attestor]);
   }
 
   await ctx.store.upsert([
-    new AttesterOrganisation({
+    new AttestorOrganisation({
       id: uid,
-      attester,
+      attestor,
       organisation,
       revoked: false,
       attestTimestamp: new Date(log.block.timestamp * 1000),

@@ -43,6 +43,7 @@ export const processor = new EvmBatchProcessor()
       EASContract.events.Attested.topic,
       EASContract.events.Revoked.topic,
     ],
+    transaction: true,
   });
 
 export type Fields = EvmBatchProcessorFields<typeof processor>;

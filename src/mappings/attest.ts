@@ -10,12 +10,12 @@ import { SchemaEncoder } from "@ethereum-attestation-service/eas-sdk";
 
 import {
   PROJECT_VERIFY_SCHEMA,
-  PROJECT_GIVBACK_ELIGIBLE_SCHEMA,
   EAS_CONTRACT_ADDRESS,
   SCHEMA_CONTRACT_ADDRESS,
 } from "../constants";
-import { Attester, Organisation, AttesterOrganisation } from "../model";
+import { Attestor, Organisation, AttestorOrganisation } from "../model";
 import { authorizeAttestation } from "../controllers/authorizeAttestation";
+import { projectVeriricationAttestation } from "../controllers/projectVerificationAttestation";
 
 export async function processAttest(
   ctx: DataHandlerContext<Store>,
@@ -24,7 +24,7 @@ export async function processAttest(
   const {
     uid,
     schema: schemaUid,
-    attester: issuer,
+    attestor: issuer,
   } = EASContract.events.Attested.decode(log);
   const easContract = new EASContract.Contract(
     ctx,
@@ -39,9 +39,7 @@ export async function processAttest(
 
   switch (schemaUid.toLocaleLowerCase()) {
     case PROJECT_VERIFY_SCHEMA:
-      break;
-
-    case PROJECT_GIVBACK_ELIGIBLE_SCHEMA:
+      await projectVeriricationAttestation(ctx, log);
       break;
 
     default:

@@ -1,5 +1,5 @@
 import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, ManyToOne as ManyToOne_, Index as Index_} from "typeorm"
-import {AttesterOrganisation} from "./attesterOrganisation.model"
+import {AttestorOrganisation} from "./attestorOrganisation.model"
 import {Project} from "./project.model"
 
 @Entity_()
@@ -15,7 +15,7 @@ export class ProjectAttestation {
     id!: string
 
     @Column_("bool", {nullable: false})
-    value!: boolean
+    vouchOrFlag!: boolean
 
     @Column_("text", {nullable: false})
     txHash!: string
@@ -24,10 +24,16 @@ export class ProjectAttestation {
     revoked!: boolean
 
     @Index_()
-    @ManyToOne_(() => AttesterOrganisation, {nullable: true})
-    attesterOrganisation!: AttesterOrganisation
+    @ManyToOne_(() => AttestorOrganisation, {nullable: true})
+    attestorOrganisation!: AttestorOrganisation
 
     @Index_()
     @ManyToOne_(() => Project, {nullable: true})
     project!: Project
+
+    @Column_("timestamp with time zone", {nullable: false})
+    attestTimestamp!: Date
+
+    @Column_("text", {nullable: true})
+    comment!: string | undefined | null
 }

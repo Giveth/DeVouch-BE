@@ -1,5 +1,5 @@
 import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, Index as Index_, OneToMany as OneToMany_} from "typeorm"
-import {AttesterOrganisation} from "./attesterOrganisation.model"
+import {AttestorOrganisation} from "./attestorOrganisation.model"
 
 @Entity_()
 export class Organisation {
@@ -45,8 +45,8 @@ export class Organisation {
     color!: string | undefined | null
 
     /**
-     * Organization Attesters
+     * Organization Attestors
      */
-    @OneToMany_(() => AttesterOrganisation, e => e.organisation)
-    attesters!: AttesterOrganisation[]
+    @OneToMany_(() => AttestorOrganisation, e => e.organisation)
+    attestors!: AttestorOrganisation[]
 }

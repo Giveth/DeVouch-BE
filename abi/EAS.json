@@ -122,7 +122,7 @@
       },
       {
         "type": "address",
-        "name": "attester",
+        "name": "attestor",
         "indexed": true
       },
       {
@@ -149,7 +149,7 @@
       },
       {
         "type": "address",
-        "name": "attester",
+        "name": "attestor",
         "indexed": true
       },
       {
@@ -337,7 +337,7 @@
           },
           {
             "type": "address",
-            "name": "attester"
+            "name": "attestor"
           }
         ]
       }
@@ -410,7 +410,7 @@
           },
           {
             "type": "address",
-            "name": "attester"
+            "name": "attestor"
           },
           {
             "type": "bool",
@@ -666,7 +666,7 @@
           },
           {
             "type": "address",
-            "name": "attester"
+            "name": "attestor"
           }
         ]
       }

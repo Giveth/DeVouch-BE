@@ -1,28 +1,30 @@
 type ProjectAttestation @entity {
   "UID of the attestation"
   id: ID!
-  value: Boolean!
+  vouchOrFlag: Boolean!
   txHash: String!
   revoked: Boolean!
-  attesterOrganisation: AttesterOrganisation!
+  attestorOrganisation: AttestorOrganisation!
   project: Project!
+  attestTimestamp: DateTime!
+  comment: String
 }
 
-type AttesterOrganisation @entity {
+type AttestorOrganisation @entity {
   "UID of the attestation made the relationship"
   id: ID!
-  attester: Attester!
+  attestor: Attestor!
   organisation: Organisation!
   "Timestamp at which the relationship was created"
   attestTimestamp: DateTime!
   revoked: Boolean!
 }
 
-type Attester @entity {
-  "Attester ID - account address"
+type Attestor @entity {
+  "Attestor ID - account address"
   id: ID!
-  "Attester Organization"
-  organizations: [AttesterOrganisation!]! @derivedFrom(field: "attester")
+  "Attestor Organization"
+  organizations: [AttestorOrganisation!]! @derivedFrom(field: "attestor")
 }
 
 type Organisation @entity {
@@ -38,8 +40,8 @@ type Organisation @entity {
   issuer: String!
   "Color of the organization"
   color: String
-  "Organization Attesters"
-  attesters: [AttesterOrganisation!]! @derivedFrom(field: "organisation")
+  "Organization Attestors"
+  attestors: [AttestorOrganisation!]! @derivedFrom(field: "organisation")
 }
 
 type Project @entity {

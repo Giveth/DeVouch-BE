@@ -10,6 +10,3 @@ export const SCHEMA_CONTRACT_ADDRESS = assertNotNull(
 export const PROJECT_VERIFY_SCHEMA = assertNotNull(
   process.env.PROJECT_VERIFY_ATTESTATION_SCHEMA
 ).toLocaleLowerCase();
-export const PROJECT_GIVBACK_ELIGIBLE_SCHEMA = assertNotNull(
-  process.env.PROJECT_GIVBACK_ELIGIBLE_ATTESTATION_SCHEMA
-).toLocaleLowerCase();
