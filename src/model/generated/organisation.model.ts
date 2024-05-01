@@ -21,12 +21,6 @@ export class Organisation {
     name!: string
 
     /**
-     * Schema field holding the authorized user account address
-     */
-    @Column_("text", {nullable: false})
-    schemaUserField!: string
-
-    /**
      * Issuing authority address
      */
     @Column_("text", {nullable: false})

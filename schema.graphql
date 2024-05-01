@@ -1,6 +1,7 @@
 type ProjectAttestation @entity {
   "UID of the attestation"
   id: ID!
+  recipient: String!
   vouchOrFlag: Boolean!
   txHash: String!
   revoked: Boolean!
@@ -33,8 +34,6 @@ type Organisation @entity {
   id: ID!
   "Organization Name"
   name: String! @index @unique
-  "Schema field holding the authorized user account address"
-  schemaUserField: String!
   "Issuing authority address"
   issuer: String!
   "Color of the organization"

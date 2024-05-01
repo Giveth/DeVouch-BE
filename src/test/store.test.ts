@@ -13,7 +13,6 @@ describe("simple storage", () => {
       id: "schemaUid",
       name: "name",
       issuer: "issuer",
-      schemaUserField: "schemaUserField",
     });
 
     await ctx.store.upsert([organization]);

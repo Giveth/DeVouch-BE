@@ -20,6 +20,7 @@ export const handleProjectAttestation = async (
     uid,
     schema: schemaUid,
     attestor: issuer,
+    recipient,
   } = EASContract.events.Attested.decode(log);
 
   const decodedData = await getAttestationData(ctx, log.block, uid, schemaUid);
@@ -78,6 +79,7 @@ export const handleProjectAttestation = async (
       comment: comment,
       attestTimestamp: new Date(log.block.timestamp),
       revoked: false,
+      recipient,
     });
 
     await ctx.store.upsert(projectAttestation);

@@ -14,6 +14,9 @@ export class ProjectAttestation {
     @PrimaryColumn_()
     id!: string
 
+    @Column_("text", {nullable: false})
+    recipient!: string
+
     @Column_("bool", {nullable: false})
     vouchOrFlag!: boolean
 

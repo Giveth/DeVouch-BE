@@ -15,22 +15,7 @@ export async function processAttest(
   ctx: DataHandlerContext<Store>,
   log: Log
 ): Promise<void> {
-  const {
-    uid,
-    schema: schemaUid,
-    attestor: issuer,
-  } = EASContract.events.Attested.decode(log);
-  const easContract = new EASContract.Contract(
-    ctx,
-    log.block,
-    EAS_CONTRACT_ADDRESS
-  );
-  const schemaContract = new SchemaContract.Contract(
-    ctx,
-    log.block,
-    SCHEMA_CONTRACT_ADDRESS
-  );
-
+  const { schema: schemaUid } = EASContract.events.Attested.decode(log);
   switch (schemaUid.toLocaleLowerCase()) {
     case PROJECT_VERIFY_SCHEMA:
       await handleProjectAttestation(ctx, log);

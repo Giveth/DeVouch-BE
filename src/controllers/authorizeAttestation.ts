@@ -12,6 +12,7 @@ export const handleAuthorize = async (
     uid,
     schema: schemaUid,
     attestor: issuer,
+    recipient,
   } = EASContract.events.Attested.decode(log);
 
   const organisation = await ctx.store.findOneBy(Organisation, {
@@ -25,10 +26,7 @@ export const handleAuthorize = async (
 
   const decodedData = await getAttestationData(ctx, log.block, uid, schemaUid);
 
-  const accountAddress = decodedData
-    .find((i) => i.name === organisation.schemaUserField)
-    ?.value.value.toString()
-    .toLocaleLowerCase();
+  const accountAddress = recipient.toLocaleLowerCase();
 
   if (!accountAddress) {
     ctx.log.error(`Account address not found for on attestation ${uid}`);
