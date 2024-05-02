@@ -2,7 +2,7 @@ type ProjectAttestation @entity {
   "UID of the attestation"
   id: ID!
   recipient: String!
-  vouchOrFlag: Boolean!
+  vouch: Boolean!
   txHash: String!
   revoked: Boolean!
   attestorOrganisation: AttestorOrganisation!

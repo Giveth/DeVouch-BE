@@ -44,17 +44,18 @@ export const checkProjectAttestation = async (
 export const parseAttestationData = (
   decodedData: SchemaDecodedItem[]
 ): SafeParseReturnType<any, ProjectVerificationAttestation> => {
-  let vouchOrFlag: boolean;
+  console.log("decodedData:", decodedData);
+  let vouch: boolean;
   let projectSource: string;
   let projectId: string;
-  let attestorGroup: string[];
+  let attestorGroup: string;
   let comment: string;
 
   for (const item of decodedData) {
     const value = item.value.value;
     switch (item.name) {
-      case "vouchOrFlag":
-        vouchOrFlag = value as boolean;
+      case "vouch":
+        vouch = value as boolean;
         break;
       case "projectSource":
         projectSource = value as string;
@@ -63,7 +64,7 @@ export const parseAttestationData = (
         projectId = value as string;
         break;
       case "attestorGroup":
-        attestorGroup = Object.values(value).map((v) => v.toString());
+        attestorGroup = value as string;
         break;
       case "comment":
         comment = value as string;
@@ -73,7 +74,7 @@ export const parseAttestationData = (
 
   const projectVerificationAttestation: ProjectVerificationAttestation = {
     // @ts-ignore
-    vouchOrFlag,
+    vouch,
     // @ts-ignore
     projectSource,
     // @ts-ignore

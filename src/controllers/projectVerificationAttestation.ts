@@ -33,60 +33,61 @@ export const handleProjectAttestation = async (
     uid: ${uid}
     schemaUid: ${schemaUid}
     issuer: ${issuer}
-    decodedData: ${decodedData}
+    decodedData: ${JSON.stringify(decodedData, null, 2)}
+    projectVerificationAttestation: ${projectVerificationAttestation} 
     `);
+    throw new Error("Error parsing project verification attestation");
+  }
+
+  const { attestorGroup } = projectVerificationAttestation;
+
+  ctx.log.debug(`Processing project attestation with uid: ${uid}`);
+  // Check if the attestor is part of the organisation
+  const attestorOrganisation = await checkProjectAttestation(
+    ctx,
+    attestorGroup,
+    issuer
+  );
+
+  if (!attestorOrganisation) {
+    ctx.log.debug(
+      `Attestor ${issuer} is not part of the organisation ${attestorGroup} in project verification attestation - skipped`
+    );
     return;
   }
+  const project = await getProject(
+    ctx,
+    projectVerificationAttestation.projectSource,
+    projectVerificationAttestation.projectId
+  );
 
-  for (const attestorGroup of projectVerificationAttestation.attestorGroup) {
-    ctx.log.debug(`Processing project attestation with uid: ${uid}`);
-    // Check if the attestor is part of the organisation
-    const attestorOrganisation = await checkProjectAttestation(
-      ctx,
-      attestorGroup,
-      issuer
-    );
-
-    if (!attestorOrganisation) {
-      ctx.log.debug(
-        `Attestor ${issuer} is not part of the organisation ${attestorGroup} in project verification attestation - skipped`
-      );
-      break;
-    }
-    const project = await getProject(
-      ctx,
-      projectVerificationAttestation.projectSource,
-      projectVerificationAttestation.projectId
-    );
-
-    // Delete the previous attestation
-    const oldAttestation = await ctx.store.findOneBy(ProjectAttestation, {
-      project,
-      attestorOrganisation,
-    });
-    if (oldAttestation) {
-      await ctx.store.remove(oldAttestation);
-    }
-
-    const { vouchOrFlag, comment } = projectVerificationAttestation;
-
-    const projectAttestation = new ProjectAttestation({
-      id: uid,
-      vouchOrFlag,
-      txHash: log.getTransaction().hash,
-      project,
-      attestorOrganisation,
-      comment: comment,
-      attestTimestamp: new Date(log.block.timestamp),
-      revoked: false,
-      recipient,
-    });
-
-    await ctx.store.upsert(projectAttestation);
-    ctx.log.debug(`Upserted project attestation ${projectAttestation}`);
-
-    await updateProjectAttestationCounts(ctx, project);
+  // Delete the previous attestation
+  const oldAttestation = await ctx.store.findOneBy(ProjectAttestation, {
+    project,
+    attestorOrganisation,
+  });
+  if (oldAttestation) {
+    await ctx.store.remove(oldAttestation);
   }
+
+  const { vouch, comment } = projectVerificationAttestation;
+
+  const projectAttestation = new ProjectAttestation({
+    id: uid,
+    vouch,
+    txHash: log.getTransaction().hash,
+    project,
+    attestorOrganisation,
+    comment,
+    attestTimestamp: new Date(log.block.timestamp),
+    revoked: false,
+    recipient,
+  });
+
+  await ctx.store.upsert(projectAttestation);
+  ctx.log.debug(`Upserted project attestation ${projectAttestation}`);
+
+  await updateProjectAttestationCounts(ctx, project);
 };
 
 export const handleProjectAttestationRevoke = async (

@@ -1,10 +1,10 @@
 import { z } from "zod";
 
 export const ProjectVerificationAttestation = z.object({
-  vouchOrFlag: z.boolean(),
+  vouch: z.boolean(),
   projectSource: z.string(),
   projectId: z.string(),
-  attestorGroup: z.array(z.string()),
+  attestorGroup: z.string(),
   comment: z.string().optional(),
 });
 

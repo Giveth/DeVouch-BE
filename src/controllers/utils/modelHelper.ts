@@ -10,14 +10,14 @@ export const updateProjectAttestationCounts = async (
     ctx.store.count(ProjectAttestation, {
       where: {
         project,
-        vouchOrFlag: true,
+        vouch: true,
         revoked: false,
       },
     }),
     ctx.store.count(ProjectAttestation, {
       where: {
         project,
-        vouchOrFlag: false,
+        vouch: false,
         revoked: false,
       },
     }),
