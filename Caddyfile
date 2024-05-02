@@ -1,3 +1,4 @@
+# HTTP site block
 {$GQL_URL} {
-  reverse_proxy devouch:4350
+	reverse_proxy devouch:4350
 }

@@ -12,6 +12,5 @@ deploy:
     cmd: [ "sqd", "process:prod" ]
     env:
       RPC_ENDPOINT: ${{ secrets.RPC_ENDPOINT }}
-      DB_HOST: squid-db
   api:
     cmd: [ "sqd", "serve:prod" ]

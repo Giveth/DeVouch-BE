@@ -3,7 +3,7 @@ version: "3"
 services:
   squid-db:
     image: postgres:15
-    container_name: devouch-be
+    container_name: squid-db
     networks:
       - devouch-be
     environment:
@@ -27,9 +27,11 @@ services:
       - .env
     ports:
       - "${GQL_PORT}:4350"
+    depends_on:
+      - squid-db
 
   caddy:
-    image: caddy:2-alpine
+    image: caddy:2.7.5
     container_name: caddy
     restart: always
     networks:
