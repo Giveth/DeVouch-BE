@@ -1,11 +1,16 @@
 import { describe, expect, test, afterAll } from "@jest/globals";
-import { closeConnection, getCtx } from "./utils";
+import { closeConnection, getCtx, getEntityManager } from "./utils";
 import { getProject } from "../controllers/utils/modelHelper";
 import { Project } from "../model";
 
 describe("get project", () => {
   afterAll(async () => {
     await closeConnection();
+  });
+
+  beforeEach(async () => {
+    const em = await getEntityManager();
+    await em.delete(Project, {});
   });
 
   test("handles non-existent projects", async () => {
@@ -19,6 +24,8 @@ describe("get project", () => {
   test("fetches an existing project", async () => {
     const ctx = await getCtx();
     const id = "giveth-1";
+    // create a project manually
+    await getProject(ctx, "giveth", "1");
     let _project: Project | undefined = await ctx.store.get(Project, id);
     const project = await getProject(ctx, "giveth", "1");
 
