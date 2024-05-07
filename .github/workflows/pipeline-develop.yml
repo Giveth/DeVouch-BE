@@ -21,7 +21,7 @@ jobs:
           git checkout develop
           git checkout -- .
           git pull
-          docker compose -f docker-compose-full.yml stop devouch squid-db
-          docker compose -f docker-compose-full.yml rm devouch squid-db
-          docker compose -f docker-compose-full.yml up -d --build
+          docker compose stop devouch squid-db
+          docker compose rm devouch squid-db
+          docker compose up -d --build
           docker image prune -a --force
