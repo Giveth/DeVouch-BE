@@ -1,0 +1,21 @@
+name: start-devouch
+
+on:
+  workflow_dispatch:
+
+jobs:
+
+  start:
+    name: Start Devouch
+    runs-on: ubuntu-latest
+    steps:
+    - name: Start Devouch
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.STAGING_HOST }}
+        username: ${{ secrets.STAGING_USERNAME }}
+        key: ${{ secrets.STAGING_PRIVATE_KEY }}
+        port: 22
+        script: | 
+          cd $HOME/DeVouch-BE
+          docker compose up -d
