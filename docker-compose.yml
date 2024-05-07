@@ -4,6 +4,7 @@ services:
   squid-db:
     image: postgres:15
     container_name: squid-db
+    restart: always
     networks:
       - devouch-be
     environment:
@@ -21,6 +22,7 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: devouch-be
+    restart: always
     networks:
       - devouch-be
     env_file:
@@ -39,6 +41,8 @@ services:
     ports:
       - 80:80
       - 443:443
+      - 2019:2019
+      - 2020:2020
     env_file:
       - .env
     environment:
@@ -48,10 +52,11 @@ services:
       - caddy_config:/config
       - ./Caddyfile:/etc/caddy/Caddyfile
 
-networks:
-  devouch-be:
-
 volumes:
   caddy_data:
   caddy_config:
   db-data:
+
+networks:
+  devouch-be:
+    driver: bridge
