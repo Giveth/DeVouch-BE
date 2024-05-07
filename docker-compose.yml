@@ -1,8 +1,11 @@
 version: "3"
 
 services:
-  db:
+  squid-db:
     image: postgres:15
+    container_name: squid-db
+    networks:
+      - devouch-be
     environment:
       POSTGRES_DB: squid
       POSTGRES_PASSWORD: postgres
@@ -10,3 +13,45 @@ services:
       - "${DB_PORT}:5432"
       # command: ["postgres", "-c", "log_statement=all"]
     shm_size: 1gb
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+  devouch:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: devouch-be
+    networks:
+      - devouch-be
+    env_file:
+      - .env
+    ports:
+      - "${GQL_PORT}:4350"
+    depends_on:
+      - squid-db
+
+  caddy:
+    image: caddy:2.7.5
+    container_name: caddy
+    restart: always
+    networks:
+      - devouch-be
+    ports:
+      - 80:80
+      - 443:443
+    env_file:
+      - .env
+    environment:
+      GQL_URL: ${GQL_URL:-}
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+      - ./Caddyfile:/etc/caddy/Caddyfile
+
+networks:
+  devouch-be:
+
+volumes:
+  caddy_data:
+  caddy_config:
+  db-data:
