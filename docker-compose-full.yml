@@ -50,6 +50,7 @@ services:
 
 networks:
   devouch-be:
+
 volumes:
   caddy_data:
   caddy_config:
