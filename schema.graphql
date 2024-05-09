@@ -45,9 +45,9 @@ type Project @entity {
   "Project Source and Project ID separated by a hyphen"
   id: ID!
   "Source of the project"
-  source: String!
+  source: String! @index
   "Project ID. Unique within the source"
-  projectId: String!
+  projectId: String! @index
   "Title of the project"
   title: String
   "Description of the project"
