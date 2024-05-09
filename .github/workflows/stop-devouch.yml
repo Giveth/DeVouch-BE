@@ -19,6 +19,6 @@ jobs:
         script: |
           cd $HOME/DeVouch-BE
           docker compose stop devouch squid-db
-          docker compose rm devouch squid-db
-          docker rmi $(docker images | grep 'devouch' | awk '{print $3}')
+          docker compose rm -f -v devouch squid-db
+          docker rmi -f $(docker images | grep 'devouch' | awk '{print $3}')
           docker volume rm $(docker volume ls | grep 'db-data' | awk '{print $2}')
