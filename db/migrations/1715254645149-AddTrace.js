@@ -1,6 +1,6 @@
 
-module.exports = class AddTrace1715238240968 {
-    name = "AddTrace1715238240968";
+module.exports = class AddTrace1715254645149 {
+    name = "AddTrace1715254645149";
     
     async up(db) {
         // add organisation with name "Trace" and schema id "0x2e22df9a11e06c306ed8f64ca45ceae02efcf8a443371395a78371bc4fb6f722"

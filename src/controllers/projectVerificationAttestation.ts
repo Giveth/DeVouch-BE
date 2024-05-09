@@ -1,7 +1,10 @@
 import { DataHandlerContext, Log } from "@subsquid/evm-processor";
 import { Store } from "@subsquid/typeorm-store";
 import * as EASContract from "../abi/EAS";
-import { getAttestationData } from "./utils/easHelper";
+import {
+  getAttestationData,
+  removeDuplicateProjectAttestations,
+} from "./utils/easHelper";
 import { AttestorOrganisation, ProjectAttestation } from "../model";
 import {
   getProject,
@@ -30,10 +33,15 @@ export const handleProjectAttestation = async (
     schemaUid
   );
 
-  const attestorOrganisation = await ctx.store.get(
-    AttestorOrganisation,
-    refUID.toLowerCase()
-  );
+  const attestorOrganisation = await ctx.store.get(AttestorOrganisation, {
+    where: {
+      id: refUID.toLowerCase(),
+    },
+    relations: {
+      organisation: true,
+      attestor: true,
+    },
+  });
 
   if (!attestorOrganisation) {
     ctx.log.debug(
@@ -72,16 +80,14 @@ export const handleProjectAttestation = async (
   );
 
   // Delete the previous attestation
-  const oldAttestation = await ctx.store.findOneBy(ProjectAttestation, {
+  await removeDuplicateProjectAttestations(
+    ctx,
     project,
-    attestorOrganisation,
-  });
-  if (oldAttestation) {
-    await ctx.store.remove(oldAttestation);
-  }
+    attestorOrganisation.attestor,
+    attestorOrganisation.organisation
+  );
 
   const { vouch, comment } = projectVerificationAttestation;
-
   const projectAttestation = new ProjectAttestation({
     id: uid,
     vouch,

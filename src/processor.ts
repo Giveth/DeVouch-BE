@@ -10,7 +10,7 @@ import {
 } from "@subsquid/evm-processor";
 
 import * as EASContract from "./abi/EAS";
-import { EAS_CONTRACT_ADDRESS } from "./constants";
+import { EAS_CONTRACT_ADDRESS, START_BLOCK } from "./constants";
 
 export const processor = new EvmBatchProcessor()
   // Lookup archive by the network name in Subsquid registry
@@ -35,7 +35,7 @@ export const processor = new EvmBatchProcessor()
     },
   })
   .setBlockRange({
-    from: 5815457,
+    from: START_BLOCK,
   })
   .addLog({
     address: [EAS_CONTRACT_ADDRESS],

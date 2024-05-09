@@ -2,6 +2,7 @@ import { DataHandlerContext, Log } from "@subsquid/evm-processor";
 import { Store } from "@subsquid/typeorm-store";
 import { Attestor, AttestorOrganisation, Organisation } from "../model";
 import * as EASContract from "../abi/EAS";
+import { getAttestor } from "./utils/modelHelper";
 
 export const handleAuthorize = async (
   ctx: DataHandlerContext<Store>,
@@ -30,8 +31,7 @@ export const handleAuthorize = async (
     return;
   }
 
-  const attestor = new Attestor({ id: accountAddress });
-  await ctx.store.upsert([attestor]);
+  const attestor = await getAttestor(ctx, accountAddress);
 
   const key = uid.toLocaleLowerCase();
 
