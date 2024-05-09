@@ -16,8 +16,8 @@ jobs:
         username: ${{ secrets.STAGING_USERNAME }}
         key: ${{ secrets.STAGING_PRIVATE_KEY }}
         port: 22
-        script: | 
+        script: |
           cd $HOME/DeVouch-BE
           docker compose stop devouch squid-db
           docker compose rm -f -v devouch squid-db
-          docker volume prune -f
+          docker rmi $(docker images | grep 'devouch' | awk '{print $3}')

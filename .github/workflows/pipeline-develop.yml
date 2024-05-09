@@ -16,13 +16,12 @@ jobs:
         username: ${{ secrets.STAGING_USERNAME }}
         key: ${{ secrets.STAGING_PRIVATE_KEY }}
         port: 22
-        script: | 
+        script: |
           cd $HOME/DeVouch-BE
           git checkout develop
           git checkout -- .
           git pull
           docker compose stop devouch squid-db
           docker compose rm -v -f devouch squid-db
-          docker volume prune -f
+          docker rmi $(docker images | grep 'devouch' | awk '{print $3}')
           docker compose up -d --build
-          docker image prune -a --force
