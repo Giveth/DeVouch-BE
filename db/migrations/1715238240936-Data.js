@@ -1,11 +1,11 @@
-module.exports = class Data1714655138524 {
-    name = 'Data1714655138524'
+module.exports = class Data1715238240936 {
+    name = 'Data1715238240936'
 
     async up(db) {
         await db.query(`CREATE TABLE "attestor" ("id" character varying NOT NULL, CONSTRAINT "PK_2ba0dae296b9deebeb9ecbbf508" PRIMARY KEY ("id"))`)
         await db.query(`CREATE TABLE "organisation" ("id" character varying NOT NULL, "name" text NOT NULL, "issuer" text NOT NULL, "color" text, CONSTRAINT "PK_c725ae234ef1b74cce43d2d00c1" PRIMARY KEY ("id"))`)
         await db.query(`CREATE UNIQUE INDEX "IDX_d9428f9c8e3052d6617e3aab0e" ON "organisation" ("name") `)
-        await db.query(`CREATE TABLE "attestor_organisation" ("id" character varying NOT NULL, "uid" text NOT NULL, "attest_timestamp" TIMESTAMP WITH TIME ZONE NOT NULL, "revoked" boolean NOT NULL, "attestor_id" character varying, "organisation_id" character varying, CONSTRAINT "PK_ac02a8a577635d60275796a9d03" PRIMARY KEY ("id"))`)
+        await db.query(`CREATE TABLE "attestor_organisation" ("id" character varying NOT NULL, "attest_timestamp" TIMESTAMP WITH TIME ZONE NOT NULL, "revoked" boolean NOT NULL, "attestor_id" character varying, "organisation_id" character varying, CONSTRAINT "PK_ac02a8a577635d60275796a9d03" PRIMARY KEY ("id"))`)
         await db.query(`CREATE INDEX "IDX_22cd09c4533533cebedb5487f4" ON "attestor_organisation" ("attestor_id") `)
         await db.query(`CREATE INDEX "IDX_b0d947390c1e10152bb1387fa2" ON "attestor_organisation" ("organisation_id") `)
         await db.query(`CREATE TABLE "project" ("id" character varying NOT NULL, "source" text NOT NULL, "project_id" text NOT NULL, "title" text, "description" text, "total_vouches" integer NOT NULL, "total_flags" integer NOT NULL, "last_updated_timestamp" TIMESTAMP WITH TIME ZONE NOT NULL, CONSTRAINT "PK_4d68b1358bb5b766d3e78f32f57" PRIMARY KEY ("id"))`)

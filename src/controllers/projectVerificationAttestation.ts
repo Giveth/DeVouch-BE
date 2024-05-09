@@ -2,7 +2,7 @@ import { DataHandlerContext, Log } from "@subsquid/evm-processor";
 import { Store } from "@subsquid/typeorm-store";
 import * as EASContract from "../abi/EAS";
 import { getAttestationData } from "./utils/easHelper";
-import { ProjectAttestation } from "../model";
+import { AttestorOrganisation, ProjectAttestation } from "../model";
 import {
   getProject,
   updateProjectAttestationCounts,
@@ -23,7 +23,31 @@ export const handleProjectAttestation = async (
     recipient,
   } = EASContract.events.Attested.decode(log);
 
-  const decodedData = await getAttestationData(ctx, log.block, uid, schemaUid);
+  const { decodedData, refUID } = await getAttestationData(
+    ctx,
+    log.block,
+    uid,
+    schemaUid
+  );
+
+  const attestorOrganisation = await ctx.store.get(
+    AttestorOrganisation,
+    refUID.toLowerCase()
+  );
+
+  if (!attestorOrganisation) {
+    ctx.log.debug(
+      `Attestor ${issuer} is not part of any organisation with ref UI ${refUID}`
+    );
+    return;
+  }
+
+  if (attestorOrganisation.revoked) {
+    ctx.log.debug(
+      `Attestor ${issuer} authorization attestation ${refUID} is revoked from organisation ${attestorOrganisation.organisation.name}`
+    );
+    return;
+  }
 
   const { success, data: projectVerificationAttestation } =
     parseAttestationData(decodedData);
@@ -39,22 +63,8 @@ export const handleProjectAttestation = async (
     throw new Error("Error parsing project verification attestation");
   }
 
-  const { attestorGroup } = projectVerificationAttestation;
-
   ctx.log.debug(`Processing project attestation with uid: ${uid}`);
-  // Check if the attestor is part of the organisation
-  const attestorOrganisation = await checkProjectAttestation(
-    ctx,
-    attestorGroup,
-    issuer
-  );
 
-  if (!attestorOrganisation) {
-    ctx.log.debug(
-      `Attestor ${issuer} is not part of the organisation ${attestorGroup} in project verification attestation - skipped`
-    );
-    return;
-  }
   const project = await getProject(
     ctx,
     projectVerificationAttestation.projectSource,

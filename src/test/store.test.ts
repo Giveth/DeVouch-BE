@@ -1,5 +1,5 @@
 import { describe, expect, test, afterAll } from "@jest/globals";
-import { closeConnection, getCtx } from "./utils";
+import { closeConnection, getTestCtx } from "./utils";
 import { Organisation } from "../model";
 
 describe("simple storage", () => {
@@ -8,7 +8,7 @@ describe("simple storage", () => {
   });
 
   test("sample authorized attest", async () => {
-    const ctx = await getCtx();
+    const ctx = await getTestCtx();
     const organization = new Organisation({
       id: "schemaUid",
       name: "name",

@@ -2,7 +2,6 @@ import { DataHandlerContext, Log } from "@subsquid/evm-processor";
 import { Store } from "@subsquid/typeorm-store";
 import { Attestor, AttestorOrganisation, Organisation } from "../model";
 import * as EASContract from "../abi/EAS";
-import { getAttestationData } from "./utils/easHelper";
 
 export const handleAuthorize = async (
   ctx: DataHandlerContext<Store>,
@@ -24,8 +23,6 @@ export const handleAuthorize = async (
 
   ctx.log.debug(`Processing authorize attestation with uid: ${uid}`);
 
-  const decodedData = await getAttestationData(ctx, log.block, uid, schemaUid);
-
   const accountAddress = recipient.toLocaleLowerCase();
 
   if (!accountAddress) {
@@ -36,13 +33,12 @@ export const handleAuthorize = async (
   const attestor = new Attestor({ id: accountAddress });
   await ctx.store.upsert([attestor]);
 
-  const key = `${accountAddress}-${organisation.id}`;
+  const key = uid.toLocaleLowerCase();
 
   let attestorOrganisation: AttestorOrganisation = new AttestorOrganisation({
     id: key,
     attestor,
     organisation,
-    uid,
     revoked: false,
     attestTimestamp: new Date(log.block.timestamp),
   });
@@ -52,4 +48,23 @@ export const handleAuthorize = async (
   ctx.log.debug(
     `Attestor ${accountAddress} authorized for organisation ${organisation.name}: ${attestorOrganisation}`
   );
+};
+
+export const handleAuthorizeRevoke = async (
+  ctx: DataHandlerContext<Store>,
+  uid: string
+) => {
+  const attestation = await ctx.store.findOne(AttestorOrganisation, {
+    where: {
+      id: uid.toLocaleLowerCase(),
+    },
+  });
+
+  if (!attestation) {
+    return;
+  }
+
+  attestation.revoked = true;
+  await ctx.store.upsert(attestation);
+  ctx.log.debug(`Revoked authorize attestation ${attestation}`);
 };

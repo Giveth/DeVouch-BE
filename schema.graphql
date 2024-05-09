@@ -12,9 +12,8 @@ type ProjectAttestation @entity {
 }
 
 type AttestorOrganisation @entity {
-  id: ID!
   "UID of the attestation made the relationship"
-  uid: String!
+  id: ID!
   attestor: Attestor!
   organisation: Organisation!
   "Timestamp at which the relationship was created"

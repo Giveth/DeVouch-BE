@@ -44,7 +44,6 @@ export const checkProjectAttestation = async (
 export const parseAttestationData = (
   decodedData: SchemaDecodedItem[]
 ): SafeParseReturnType<any, ProjectVerificationAttestation> => {
-  console.log("decodedData:", decodedData);
   let vouch: boolean;
   let projectSource: string;
   let projectId: string;

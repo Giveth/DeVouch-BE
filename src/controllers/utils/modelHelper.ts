@@ -1,6 +1,6 @@
 import { DataHandlerContext } from "@subsquid/evm-processor";
 import { Store } from "@subsquid/typeorm-store";
-import { Project, ProjectAttestation } from "../../model";
+import { Attestor, Project, ProjectAttestation } from "../../model";
 
 export const updateProjectAttestationCounts = async (
   ctx: DataHandlerContext<Store>,
@@ -53,4 +53,17 @@ export const getProject = async (
   }
 
   return project as Project;
+};
+
+export const getAttestor = async (
+  ctx: DataHandlerContext<Store>,
+  address: string
+): Promise<Attestor> => {
+  let attestor = await ctx.store.get(Attestor, address);
+  if (!attestor) {
+    await ctx.store.upsert(new Attestor({ id: address }));
+    attestor = await ctx.store.get(Attestor, address);
+  }
+
+  return attestor as Attestor;
 };

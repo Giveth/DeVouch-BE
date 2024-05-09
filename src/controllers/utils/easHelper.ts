@@ -29,15 +29,22 @@ export const getAttestationData = async (
   block: Block,
   attestationUid: string,
   schemaUid: string
-): Promise<SchemaDecodedItem[]> => {
+): Promise<{
+  decodedData: SchemaDecodedItem[];
+  refUID: string;
+}> => {
   const easContract = new EASContract.Contract(
     ctx,
     block,
     EAS_CONTRACT_ADDRESS
   );
 
-  const { data } = await easContract.getAttestation(attestationUid);
+  const { data, refUID } = await easContract.getAttestation(attestationUid);
   const schemaEncoder = await getEasSchemaEncoder(ctx, block, schemaUid);
 
-  return schemaEncoder.decodeData(data);
+  const decodedData = schemaEncoder.decodeData(data);
+  return {
+    decodedData,
+    refUID,
+  };
 };
