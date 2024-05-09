@@ -18,4 +18,4 @@ jobs:
         port: 22
         script: |
           cd $HOME/DeVouch-BE
-          docker compose up -d --build --no-cache
+          docker compose up -d --build
