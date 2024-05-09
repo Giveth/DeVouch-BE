@@ -24,4 +24,5 @@ jobs:
           docker compose stop devouch squid-db
           docker compose rm -v -f devouch squid-db
           docker rmi $(docker images | grep 'devouch' | awk '{print $3}')
-          docker compose up -d --build --no-cache
+          docker volume rm $(docker volume ls | grep 'db-data' | awk '{print $2}')
+          docker compose up -d --build
