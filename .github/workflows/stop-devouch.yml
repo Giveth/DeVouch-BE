@@ -19,4 +19,4 @@ jobs:
         script: | 
           cd $HOME/DeVouch-BE
           docker compose stop devouch squid-db
-          docker compose rm devouch squid-db
+          docker compose rm -f -v devouch squid-db
