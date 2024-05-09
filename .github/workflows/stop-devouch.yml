@@ -20,3 +20,4 @@ jobs:
           cd $HOME/DeVouch-BE
           docker compose stop devouch squid-db
           docker compose rm -f -v devouch squid-db
+          docker volume prune -f

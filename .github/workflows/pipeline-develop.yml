@@ -22,6 +22,7 @@ jobs:
           git checkout -- .
           git pull
           docker compose stop devouch squid-db
-          docker compose rm -f -v devouch squid-db
+          docker compose rm devouch squid-db
+          docker volume prune -f
           docker compose up -d --build
           docker image prune -a --force
