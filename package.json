@@ -5,7 +5,10 @@
     "build": "rm -rf lib && tsc",
     "test:run-migration": "dotenvx run --env-file=.env.test -- squid-typeorm-migration apply",
     "test:run-fresh-db": "docker-compose -f docker-compose-test.yml down -v; docker-compose --env-file .env.test -f docker-compose-test.yml up -d",
-    "test": "npm run test:run-fresh-db; jest"
+    "test": "npm run test:run-fresh-db; jest",
+    "clear:generate:migration:run:locally": "sqd migration:clean; sqd build ; docker compose -f docker-compose-potgres.yml down -v;docker compose -f docker-compose-potgres.yml up -d;sqd migration:generate;node ./add-organisation.js; sqd run",
+    "clear:run:locally": "sqd build ; docker compose -f docker-compose-potgres.yml down -v;docker compose -f docker-compose-potgres.yml up -d; sqd run",
+    "run:locally": "sqd build; sqd run"
   },
   "dependencies": {
     "@ethereum-attestation-service/eas-sdk": "^1.5.0",
@@ -17,6 +20,7 @@
     "dotenv": "^16.4.4",
     "ethers": "^6.12.1",
     "pg": "^8.11.5",
+    "type-graphql": "^1.2.0-rc.1",
     "typeorm": "^0.3.20",
     "zod": "^3.23.8"
   },
