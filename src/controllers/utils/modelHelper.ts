@@ -1,6 +1,7 @@
 import { DataHandlerContext } from "@subsquid/evm-processor";
 import { Store } from "@subsquid/typeorm-store";
 import { Attestor, Project, ProjectAttestation } from "../../model";
+import { getEntityManger } from "./databaseHelper";
 
 export const updateProjectAttestationCounts = async (
   ctx: DataHandlerContext<Store>,
@@ -27,6 +28,9 @@ export const updateProjectAttestationCounts = async (
   project.totalFlags = flagCount;
 
   await ctx.store.upsert(project);
+  await getEntityManger(ctx).query(
+    "REFRESH MATERIALIZED VIEW project_stats_view;"
+  );
 };
 
 export const getProject = async (
