@@ -3,23 +3,23 @@ module.exports = class ProjectStatsMatiralizeView1720600963052 {
 
   async up(db) {
     await db.query(`
-        DROP MATERIALIZED VIEW IF EXISTS project_stats_view;
+        DROP MATERIALIZED VIEW IF EXISTS PROJECT_STATS_VIEW;
 
         DO $$
-        BEGIN
-            IF NOT EXISTS (
-                SELECT 1 FROM pg_type WHERE typname = 'name_count_type'
-            ) THEN
-                CREATE TYPE name_count_type AS (
-                    name TEXT,
-                    count INTEGER
-                );
-            END IF;
-        END $$;
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM pg_type WHERE typname = 'name_count_type'
+                    ) THEN
+                        CREATE TYPE name_count_type AS (
+                            name TEXT,
+                            count INTEGER
+                        );
+                    END IF;
+                END $$;
         
-        CREATE MATERIALIZED VIEW project_stats_view AS
+        CREATE MATERIALIZED VIEW PROJECT_STATS_VIEW AS
         WITH
-            ORG_VOUCH AS (
+            ORG_ATTESTATIONS AS (
                 SELECT
                     PR_AT.PROJECT_ID,
                     OG.NAME,
@@ -32,18 +32,27 @@ module.exports = class ProjectStatsMatiralizeView1720600963052 {
                     PR_AT.REVOKED = FALSE
                     AND AT_OG.REVOKED = FALSE
             ),
+            PR_ORG AS (
+                SELECT
+                    PROJECT_ID,
+                    ARRAY_AGG(DISTINCT ORG_ATTESTATIONS.NAME) AS UNIQ_ORGS
+                FROM
+                    ORG_ATTESTATIONS
+                GROUP BY
+                    PROJECT_ID
+            ),
             PR_ORG_V AS (
                 SELECT
-                    ORG_VOUCH.PROJECT_ID,
-                    ORG_VOUCH.NAME,
-                    ORG_VOUCH.VOUCH,
+                    ORG_ATTESTATIONS.PROJECT_ID,
+                    ORG_ATTESTATIONS.NAME,
+                    ORG_ATTESTATIONS.VOUCH,
                     COUNT(*)
                 FROM
-                    ORG_VOUCH
+                    ORG_ATTESTATIONS
                 GROUP BY
-                    ORG_VOUCH.PROJECT_ID,
-                    ORG_VOUCH.NAME,
-                    ORG_VOUCH.VOUCH
+                    ORG_ATTESTATIONS.PROJECT_ID,
+                    ORG_ATTESTATIONS.NAME,
+                    ORG_ATTESTATIONS.VOUCH
             ),
             ORG_FLAG_AGG AS (
                 SELECT
@@ -59,12 +68,12 @@ module.exports = class ProjectStatsMatiralizeView1720600963052 {
                 GROUP BY
                     PR_ORG_V.PROJECT_ID
             ),
-            ORG_VOUCH_AGG AS (
+            ORG_ATTESTATIONS_AGG AS (
                 SELECT
                     PR_ORG_V.PROJECT_ID,
                     ARRAY_AGG(
                         ROW (PR_ORG_V.NAME, PR_ORG_V.COUNT)::NAME_COUNT_TYPE
-                    ) AS ORG_VOUCHES,
+                    ) AS ORG_ATTESTATIONSES,
                     SUM(PR_ORG_V.COUNT) AS PR_TOTAL_VOUCHES
                 FROM
                     PR_ORG_V
@@ -75,20 +84,24 @@ module.exports = class ProjectStatsMatiralizeView1720600963052 {
             )
         SELECT
             ID,
-            TOTAL_VOUCHES,
-            TOTAL_FLAGS,
             PR_TOTAL_FLAGS,
             PR_TOTAL_VOUCHES,
+            PR_TOTAL_FLAGS + PR_TOTAL_VOUCHES AS TOTAL_ATTESTATIONS,
             ORG_FLAGS,
-            ORG_VOUCHES
+            ORG_ATTESTATIONSES,
+            UNIQ_ORGS
         FROM
             PROJECT
+            LEFT JOIN PR_ORG ON PR_ORG.PROJECT_ID = PROJECT.ID
             LEFT JOIN ORG_FLAG_AGG ON ORG_FLAG_AGG.PROJECT_ID = PROJECT.ID
-            LEFT JOIN ORG_VOUCH_AGG ON ORG_VOUCH_AGG.PROJECT_ID = PROJECT.ID;
-
+            LEFT JOIN ORG_ATTESTATIONS_AGG ON ORG_ATTESTATIONS_AGG.PROJECT_ID = PROJECT.ID;
+    
         `);
     await db.query(
       `CREATE INDEX idx_project_stats_view_id ON project_stats_view (ID);`
+    );
+    await db.query(
+      `CREATE INDEX idx_project_stats_view_uniq_orgs ON project_stats_view(UNIQ_ORGS);`
     );
   }
 
