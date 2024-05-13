@@ -10,10 +10,7 @@ import {
   getProject,
   updateProjectAttestationCounts,
 } from "./utils/modelHelper";
-import {
-  checkProjectAttestation,
-  parseAttestationData,
-} from "./utils/projectVerificationHelper";
+import { parseAttestationData } from "./utils/projectVerificationHelper";
 
 export const handleProjectAttestation = async (
   ctx: DataHandlerContext<Store>,

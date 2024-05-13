@@ -47,7 +47,6 @@ export const parseAttestationData = (
   let vouch: boolean;
   let projectSource: string;
   let projectId: string;
-  let attestorGroup: string;
   let comment: string;
 
   for (const item of decodedData) {
@@ -62,9 +61,6 @@ export const parseAttestationData = (
       case "projectId":
         projectId = value as string;
         break;
-      case "attestorGroup":
-        attestorGroup = value as string;
-        break;
       case "comment":
         comment = value as string;
         break;
@@ -78,8 +74,6 @@ export const parseAttestationData = (
     projectSource,
     // @ts-ignore
     projectId,
-    // @ts-ignore
-    attestorGroup,
     // @ts-ignore
     comment,
   };
