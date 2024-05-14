@@ -1,36 +1,58 @@
 import { DataHandlerContext } from "@subsquid/evm-processor";
 import { Store } from "@subsquid/typeorm-store";
-import { Attestor, Project, ProjectAttestation } from "../../model";
+import {
+  Attestor,
+  Organisation,
+  OrganisationProject,
+  Project,
+  ProjectAttestation,
+} from "../../model";
 import { getEntityManger } from "./databaseHelper";
+import { ProjectStats } from "./types";
+import { In, Not } from "typeorm";
+
+export const upsertOrganisatoinProject = async (
+  ctx: DataHandlerContext<Store>,
+  project: Project,
+  organisationId: string,
+  vouch: boolean,
+  count: number
+): Promise<void> => {
+  const organisation = await ctx.store.get(Organisation, organisationId);
+  const key = `${project.id}-${organisationId}-${vouch ? "vouch" : "flag"}`;
+  const organisationProject = new OrganisationProject({
+    id: key,
+    project,
+    organisation,
+    vouch,
+    count,
+  });
+  ctx.store.upsert(organisationProject);
+};
 
 export const updateProjectAttestationCounts = async (
   ctx: DataHandlerContext<Store>,
   project: Project
 ): Promise<void> => {
-  const [vouchCount, flagCount] = await Promise.all([
-    ctx.store.count(ProjectAttestation, {
-      where: {
-        project,
-        vouch: true,
-        revoked: false,
-      },
-    }),
-    ctx.store.count(ProjectAttestation, {
-      where: {
-        project,
-        vouch: false,
-        revoked: false,
-      },
-    }),
-  ]);
+  const em = getEntityManger(ctx);
+  const projectStats = await getProjectStats(ctx, project);
+  console.log("projectStats:", projectStats);
+  // throw new Error("Let's exit");
 
-  project.totalVouches = vouchCount;
-  project.totalFlags = flagCount;
-
+  project.totalVouches = projectStats.pr_total_vouches;
+  project.totalFlags = projectStats.pr_total_flags;
+  project.totalAttests = projectStats.pr_total_attestations;
   await ctx.store.upsert(project);
-  await getEntityManger(ctx).query(
-    "REFRESH MATERIALIZED VIEW project_stats_view;"
-  );
+
+  await em.getRepository(OrganisationProject).delete({ project });
+
+  for (const [orgId, count] of projectStats.org_flags) {
+    await upsertOrganisatoinProject(ctx, project, orgId, false, +count);
+  }
+
+  for (const [orgId, count] of projectStats.org_vouches) {
+    await upsertOrganisatoinProject(ctx, project, orgId, true, +count);
+  }
 };
 
 export const getProject = async (
@@ -50,6 +72,7 @@ export const getProject = async (
         projectId,
         totalVouches: 0,
         totalFlags: 0,
+        totalAttests: 0,
         lastUpdatedTimestamp: new Date(),
       })
     );
@@ -70,4 +93,97 @@ export const getAttestor = async (
   }
 
   return attestor as Attestor;
+};
+
+export const getProjectStats = async (
+  ctx: DataHandlerContext<Store>,
+  project: Project
+): Promise<ProjectStats> => {
+  const em = getEntityManger(ctx);
+
+  const result = await em.query(
+    `
+    WITH
+    ORG_ATTESTATIONS AS (
+      SELECT
+        PR_AT.PROJECT_ID,
+        OG.id as org_id,
+        PR_AT.VOUCH
+      FROM
+        PROJECT_ATTESTATION AS PR_AT
+        INNER JOIN ATTESTOR_ORGANISATION AS AT_OG ON PR_AT.ATTESTOR_ORGANISATION_ID = AT_OG.ID
+        INNER JOIN ORGANISATION AS OG ON AT_OG.ORGANISATION_ID = OG.ID
+      WHERE
+        PR_AT.REVOKED = FALSE
+        AND AT_OG.REVOKED = FALSE
+        AND PR_AT.PROJECT_ID = $1
+    ),
+    PR_ORG AS (
+      SELECT
+        PROJECT_ID,
+        ARRAY_AGG(DISTINCT ORG_ATTESTATIONS.org_id) AS UNIQ_ORGS
+      FROM
+        ORG_ATTESTATIONS
+        WHERE
+          PROJECT_ID = $1
+      GROUP BY
+        PROJECT_ID
+    ),
+    PR_ORG_V AS (
+      SELECT
+        ORG_ATTESTATIONS.PROJECT_ID,
+        ORG_ATTESTATIONS.org_id,
+        ORG_ATTESTATIONS.VOUCH,
+        COUNT(*)
+      FROM
+        ORG_ATTESTATIONS
+      GROUP BY
+        ORG_ATTESTATIONS.PROJECT_ID,
+        ORG_ATTESTATIONS.org_id,
+        ORG_ATTESTATIONS.VOUCH
+    ),
+    ORG_FLAG_AGG AS (
+      SELECT
+        PR_ORG_V.PROJECT_ID,
+        ARRAY_AGG(ROW (PR_ORG_V.org_id, PR_ORG_V.COUNT)) AS ORG_FLAGS,
+        SUM(PR_ORG_V.COUNT) AS PR_TOTAL_FLAGS
+      FROM
+        PR_ORG_V
+      WHERE
+        PR_ORG_V.VOUCH = FALSE
+      GROUP BY
+        PR_ORG_V.PROJECT_ID
+    ),
+    ORG_ATTESTATIONS_AGG AS (
+      SELECT
+        PR_ORG_V.PROJECT_ID,
+        ARRAY_AGG(ROW (PR_ORG_V.org_id, PR_ORG_V.COUNT)) AS ORG_VOUCHES,
+        SUM(PR_ORG_V.COUNT) AS PR_TOTAL_VOUCHES
+      FROM
+        PR_ORG_V
+      WHERE
+        PR_ORG_V.VOUCH = TRUE
+      GROUP BY
+        PR_ORG_V.PROJECT_ID
+    )
+  SELECT
+    ID,
+    PR_TOTAL_FLAGS,
+    PR_TOTAL_VOUCHES,
+    PR_TOTAL_FLAGS + PR_TOTAL_VOUCHES AS PR_TOTAL_ATTESTATIONS,
+    ORG_FLAGS,
+    ORG_VOUCHES,
+    UNIQ_ORGS
+  FROM
+    PROJECT
+    LEFT JOIN PR_ORG ON PR_ORG.PROJECT_ID = PROJECT.ID
+    LEFT JOIN ORG_FLAG_AGG ON ORG_FLAG_AGG.PROJECT_ID = PROJECT.ID
+    LEFT JOIN ORG_ATTESTATIONS_AGG ON ORG_ATTESTATIONS_AGG.PROJECT_ID = PROJECT.ID
+  WHERE
+    PROJECT.ID = $1
+  `,
+    [project.id]
+  );
+
+  return ProjectStats.parse(result[0]);
 };

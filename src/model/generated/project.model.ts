@@ -1,5 +1,6 @@
 import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, Index as Index_, OneToMany as OneToMany_} from "typeorm"
 import {ProjectAttestation} from "./projectAttestation.model"
+import {OrganisationProject} from "./organisationProject.model"
 
 @Entity_()
 export class Project {
@@ -51,9 +52,18 @@ export class Project {
     @Column_("int4", {nullable: false})
     totalFlags!: number
 
+    /**
+     * Total attests
+     */
+    @Column_("int4", {nullable: false})
+    totalAttests!: number
+
     @Column_("timestamp with time zone", {nullable: false})
     lastUpdatedTimestamp!: Date
 
     @OneToMany_(() => ProjectAttestation, e => e.project)
     attests!: ProjectAttestation[]
+
+    @OneToMany_(() => OrganisationProject, e => e.project)
+    attestedOrganisations!: OrganisationProject[]
 }

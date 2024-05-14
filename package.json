@@ -4,10 +4,10 @@
   "scripts": {
     "build": "rm -rf lib && tsc",
     "test:run-migration": "dotenvx run --env-file=.env.test -- squid-typeorm-migration apply",
-    "test:run-fresh-db": "docker-compose -f docker-compose-test.yml down -v; docker-compose --env-file .env.test -f docker-compose-test.yml up -d",
-    "test": "npm run test:run-fresh-db; jest",
-    "clear:generate:migration:run:locally": "sqd migration:clean; sqd build ; docker compose -f docker-compose-potgres.yml down -v;docker compose -f docker-compose-potgres.yml up -d;sqd migration:generate;node ./add-organisation.js; sqd run",
-    "clear:run:locally": "sqd build ; docker compose -f docker-compose-potgres.yml down -v;docker compose -f docker-compose-potgres.yml up -d; sqd run",
+    "test:run-fresh-db": "docker-compose -f docker-compose-potgres-test.yml down -v; docker-compose --env-file .env.test -f docker-compose-potgres-test.yml up -d",
+    "test": "npm run test:run-fresh-db; dotenvx run --env-file=.env.test -- jest --runInBand",
+    "clear:generate:migration:run:locally": "sqd codegen ; docker compose -f docker-compose-potgres.yml down -v;docker compose -f docker-compose-potgres.yml up -d;sqd migration:generate; sqd run",
+    "clear:run:locally": "sqd codegen ; docker compose -f docker-compose-potgres.yml down -v;docker compose -f docker-compose-potgres.yml up -d; sqd run",
     "run:locally": "sqd build; sqd run"
   },
   "dependencies": {

@@ -1,6 +1,6 @@
 import { Store, TypeormDatabase } from "@subsquid/typeorm-store";
 import { createOrmConfig } from "@subsquid/typeorm-config";
-import { DataSource, EntityManager } from "typeorm";
+import { DataSource, DataSourceOptions, EntityManager } from "typeorm";
 import { DataHandlerContext } from "@subsquid/evm-processor";
 
 // import dotenv from "dotenv";

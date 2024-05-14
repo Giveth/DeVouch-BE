@@ -1,6 +1,6 @@
 import { DataHandlerContext, Log } from "@subsquid/evm-processor";
 import { Store } from "@subsquid/typeorm-store";
-import { ProjectVerificationAttestation } from "./easTypes";
+import { ProjectVerificationAttestation } from "./types";
 import { SchemaDecodedItem } from "@ethereum-attestation-service/eas-sdk";
 import { SafeParseReturnType } from "zod";
 import { Attestor, AttestorOrganisation, Organisation } from "../../model";
