@@ -18,7 +18,7 @@ export class ProjectAttestation {
     recipient!: string
 
     @Column_("bool", {nullable: false})
-    vouchOrFlag!: boolean
+    vouch!: boolean
 
     @Column_("text", {nullable: false})
     txHash!: string

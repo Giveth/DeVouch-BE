@@ -1,6 +1,6 @@
 import { Store, TypeormDatabase } from "@subsquid/typeorm-store";
 import { createOrmConfig } from "@subsquid/typeorm-config";
-import { DataSource, EntityManager } from "typeorm";
+import { DataSource, DataSourceOptions, EntityManager } from "typeorm";
 import { DataHandlerContext } from "@subsquid/evm-processor";
 
 // import dotenv from "dotenv";
@@ -11,7 +11,7 @@ import { DataHandlerContext } from "@subsquid/evm-processor";
 
 let connection: DataSource | undefined;
 
-export async function getEntityManager(): Promise<EntityManager> {
+export async function getTestEntityManager(): Promise<EntityManager> {
   if (!connection) {
     let cfg = createOrmConfig({ projectDir: __dirname + "/../.." });
     (cfg.entities as string[]).push(__dirname + "/../model/generated/*.ts");
@@ -32,13 +32,13 @@ export async function closeConnection() {
   }
 }
 
-export async function getStore(): Promise<Store> {
-  const em = await getEntityManager();
+export async function getTestStore(): Promise<Store> {
+  const em = await getTestEntityManager();
   return new Store(() => em);
 }
 
-export async function getCtx(): Promise<DataHandlerContext<Store>> {
-  const store = await getStore();
+export async function getTestCtx(): Promise<DataHandlerContext<Store>> {
+  const store = await getTestStore();
   return {
     _chain: undefined,
     log: undefined,

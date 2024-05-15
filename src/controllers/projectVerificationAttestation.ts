@@ -1,16 +1,16 @@
 import { DataHandlerContext, Log } from "@subsquid/evm-processor";
 import { Store } from "@subsquid/typeorm-store";
 import * as EASContract from "../abi/EAS";
-import { getAttestationData } from "./utils/easHelper";
-import { ProjectAttestation } from "../model";
+import {
+  getAttestationData,
+  removeDuplicateProjectAttestations,
+} from "./utils/easHelper";
+import { AttestorOrganisation, ProjectAttestation } from "../model";
 import {
   getProject,
   updateProjectAttestationCounts,
 } from "./utils/modelHelper";
-import {
-  checkProjectAttestation,
-  parseAttestationData,
-} from "./utils/projectVerificationHelper";
+import { parseAttestationData } from "./utils/projectVerificationHelper";
 
 export const handleProjectAttestation = async (
   ctx: DataHandlerContext<Store>,
@@ -23,7 +23,36 @@ export const handleProjectAttestation = async (
     recipient,
   } = EASContract.events.Attested.decode(log);
 
-  const decodedData = await getAttestationData(ctx, log.block, uid, schemaUid);
+  const { decodedData, refUID } = await getAttestationData(
+    ctx,
+    log.block,
+    uid,
+    schemaUid
+  );
+
+  const attestorOrganisation = await ctx.store.get(AttestorOrganisation, {
+    where: {
+      id: refUID.toLowerCase(),
+    },
+    relations: {
+      organisation: true,
+      attestor: true,
+    },
+  });
+
+  if (!attestorOrganisation) {
+    ctx.log.debug(
+      `Attestor ${issuer} is not part of any organisation with ref UI ${refUID}`
+    );
+    return;
+  }
+
+  if (attestorOrganisation.revoked) {
+    ctx.log.debug(
+      `Attestor ${issuer} authorization attestation ${refUID} is revoked from organisation ${attestorOrganisation.organisation.name}`
+    );
+    return;
+  }
 
   const { success, data: projectVerificationAttestation } =
     parseAttestationData(decodedData);
@@ -33,60 +62,45 @@ export const handleProjectAttestation = async (
     uid: ${uid}
     schemaUid: ${schemaUid}
     issuer: ${issuer}
-    decodedData: ${decodedData}
+    decodedData: ${JSON.stringify(decodedData)}
+    projectVerificationAttestation: ${projectVerificationAttestation} 
     `);
-    return;
+    throw new Error("Error parsing project verification attestation");
   }
 
-  for (const attestorGroup of projectVerificationAttestation.attestorGroup) {
-    ctx.log.debug(`Processing project attestation with uid: ${uid}`);
-    // Check if the attestor is part of the organisation
-    const attestorOrganisation = await checkProjectAttestation(
-      ctx,
-      attestorGroup,
-      issuer
-    );
+  ctx.log.debug(`Processing project attestation with uid: ${uid}`);
 
-    if (!attestorOrganisation) {
-      ctx.log.debug(
-        `Attestor ${issuer} is not part of the organisation ${attestorGroup} in project verification attestation - skipped`
-      );
-      break;
-    }
-    const project = await getProject(
-      ctx,
-      projectVerificationAttestation.projectSource,
-      projectVerificationAttestation.projectId
-    );
+  const project = await getProject(
+    ctx,
+    projectVerificationAttestation.projectSource,
+    projectVerificationAttestation.projectId
+  );
 
-    // Delete the previous attestation
-    const oldAttestation = await ctx.store.findOneBy(ProjectAttestation, {
-      project,
-      attestorOrganisation,
-    });
-    if (oldAttestation) {
-      await ctx.store.remove(oldAttestation);
-    }
+  // Delete the previous attestation
+  await removeDuplicateProjectAttestations(
+    ctx,
+    project,
+    attestorOrganisation.attestor,
+    attestorOrganisation.organisation
+  );
 
-    const { vouchOrFlag, comment } = projectVerificationAttestation;
+  const { vouch, comment } = projectVerificationAttestation;
+  const projectAttestation = new ProjectAttestation({
+    id: uid,
+    vouch,
+    txHash: log.getTransaction().hash,
+    project,
+    attestorOrganisation,
+    comment,
+    attestTimestamp: new Date(log.block.timestamp),
+    revoked: false,
+    recipient,
+  });
 
-    const projectAttestation = new ProjectAttestation({
-      id: uid,
-      vouchOrFlag,
-      txHash: log.getTransaction().hash,
-      project,
-      attestorOrganisation,
-      comment: comment,
-      attestTimestamp: new Date(log.block.timestamp),
-      revoked: false,
-      recipient,
-    });
+  await ctx.store.upsert(projectAttestation);
+  ctx.log.debug(`Upserted project attestation ${projectAttestation}`);
 
-    await ctx.store.upsert(projectAttestation);
-    ctx.log.debug(`Upserted project attestation ${projectAttestation}`);
-
-    await updateProjectAttestationCounts(ctx, project);
-  }
+  await updateProjectAttestationCounts(ctx, project);
 };
 
 export const handleProjectAttestationRevoke = async (
@@ -110,7 +124,7 @@ export const handleProjectAttestationRevoke = async (
 
   attestation.revoked = true;
   await ctx.store.upsert(attestation);
-  ctx.log.debug(`Revoked project attestation ${attestation}`);
+  ctx.log.debug(`Revoked project attestation ${JSON.stringify(attestation)}`);
 
   await updateProjectAttestationCounts(ctx, attestation.project);
 };

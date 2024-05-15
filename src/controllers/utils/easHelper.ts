@@ -8,6 +8,13 @@ import * as EASContract from "../../abi/EAS";
 import * as SchemaContract from "../../abi/Schema";
 import { EAS_CONTRACT_ADDRESS, SCHEMA_CONTRACT_ADDRESS } from "../../constants";
 import { Block } from "../../abi/abi.support";
+import {
+  Attestor,
+  AttestorOrganisation,
+  Organisation,
+  Project,
+  ProjectAttestation,
+} from "../../model";
 
 export const getEasSchemaEncoder = async (
   ctx: DataHandlerContext<Store>,
@@ -29,15 +36,48 @@ export const getAttestationData = async (
   block: Block,
   attestationUid: string,
   schemaUid: string
-): Promise<SchemaDecodedItem[]> => {
+): Promise<{
+  decodedData: SchemaDecodedItem[];
+  refUID: string;
+}> => {
   const easContract = new EASContract.Contract(
     ctx,
     block,
     EAS_CONTRACT_ADDRESS
   );
 
-  const { data } = await easContract.getAttestation(attestationUid);
+  const { data, refUID } = await easContract.getAttestation(attestationUid);
   const schemaEncoder = await getEasSchemaEncoder(ctx, block, schemaUid);
 
-  return schemaEncoder.decodeData(data);
+  const decodedData = schemaEncoder.decodeData(data);
+  return {
+    decodedData,
+    refUID,
+  };
+};
+
+export const removeDuplicateProjectAttestations = async (
+  ctx: DataHandlerContext<Store>,
+  project: Project,
+  attestor: Attestor,
+  organisation: Organisation
+) => {
+  const attestorOrganisations = await ctx.store.findBy(AttestorOrganisation, {
+    attestor,
+    organisation,
+  });
+
+  for (const attestorOrganisation of attestorOrganisations) {
+    const projectAttestation = await ctx.store.findOneBy(ProjectAttestation, {
+      project,
+      attestorOrganisation,
+    });
+
+    if (projectAttestation) {
+      ctx.log.debug(
+        `Removing duplicate project attestation ${projectAttestation.id}`
+      );
+      await ctx.store.remove(projectAttestation);
+    }
+  }
 };

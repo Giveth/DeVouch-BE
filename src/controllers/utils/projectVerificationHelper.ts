@@ -1,6 +1,6 @@
 import { DataHandlerContext, Log } from "@subsquid/evm-processor";
 import { Store } from "@subsquid/typeorm-store";
-import { ProjectVerificationAttestation } from "./easTypes";
+import { ProjectVerificationAttestation } from "./types";
 import { SchemaDecodedItem } from "@ethereum-attestation-service/eas-sdk";
 import { SafeParseReturnType } from "zod";
 import { Attestor, AttestorOrganisation, Organisation } from "../../model";
@@ -44,26 +44,22 @@ export const checkProjectAttestation = async (
 export const parseAttestationData = (
   decodedData: SchemaDecodedItem[]
 ): SafeParseReturnType<any, ProjectVerificationAttestation> => {
-  let vouchOrFlag: boolean;
+  let vouch: boolean;
   let projectSource: string;
   let projectId: string;
-  let attestorGroup: string[];
   let comment: string;
 
   for (const item of decodedData) {
     const value = item.value.value;
     switch (item.name) {
-      case "vouchOrFlag":
-        vouchOrFlag = value as boolean;
+      case "vouch":
+        vouch = value as boolean;
         break;
       case "projectSource":
         projectSource = value as string;
         break;
       case "projectId":
         projectId = value as string;
-        break;
-      case "attestorGroup":
-        attestorGroup = Object.values(value).map((v) => v.toString());
         break;
       case "comment":
         comment = value as string;
@@ -73,13 +69,11 @@ export const parseAttestationData = (
 
   const projectVerificationAttestation: ProjectVerificationAttestation = {
     // @ts-ignore
-    vouchOrFlag,
+    vouch,
     // @ts-ignore
     projectSource,
     // @ts-ignore
     projectId,
-    // @ts-ignore
-    attestorGroup,
     // @ts-ignore
     comment,
   };

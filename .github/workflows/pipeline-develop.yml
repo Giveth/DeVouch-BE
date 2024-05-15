@@ -1,0 +1,28 @@
+name: auto-deploy-develop
+on:
+  push:
+    branches:
+      - develop
+jobs:
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Production Auto-Deploy
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.STAGING_HOST }}
+        username: ${{ secrets.STAGING_USERNAME }}
+        key: ${{ secrets.STAGING_PRIVATE_KEY }}
+        port: 22
+        script: |
+          cd $HOME/DeVouch-BE
+          git checkout develop
+          git checkout -- .
+          git pull
+          docker compose stop devouch squid-db
+          docker compose rm -v -f devouch squid-db
+          docker rmi -f $(docker images | grep 'devouch' | awk '{print $3}')
+          docker volume rm $(docker volume ls | grep 'db-data' | awk '{print $2}')
+          docker compose up -d --build

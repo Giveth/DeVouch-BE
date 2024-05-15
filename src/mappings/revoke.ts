@@ -3,6 +3,7 @@ import { Store } from "@subsquid/typeorm-store";
 import * as EASContract from "../abi/EAS";
 import { PROJECT_VERIFY_SCHEMA } from "../constants";
 import { handleProjectAttestationRevoke } from "../controllers/projectVerificationAttestation";
+import { handleAuthorizeRevoke } from "../controllers/authorizeAttestation";
 
 export async function processRevokeLog(
   ctx: DataHandlerContext<Store>,
@@ -16,5 +17,6 @@ export async function processRevokeLog(
       break;
 
     default:
+      await handleAuthorizeRevoke(ctx, uid);
   }
 }

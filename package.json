@@ -4,21 +4,25 @@
   "scripts": {
     "build": "rm -rf lib && tsc",
     "test:run-migration": "dotenvx run --env-file=.env.test -- squid-typeorm-migration apply",
-    "test:run-fresh-db": "docker-compose -f docker-compose-test.yml down -v; docker-compose --env-file .env.test -f docker-compose-test.yml up -d",
-    "test": "npm run test:run-fresh-db; jest"
+    "test:run-fresh-db": "docker-compose -f docker-compose-potgres-test.yml down -v; docker-compose --env-file .env.test -f docker-compose-potgres-test.yml up -d",
+    "test": "npm run test:run-fresh-db; dotenvx run --env-file=.env.test -- jest --runInBand",
+    "clear:generate:migration:run:locally": "sqd codegen ; docker compose -f docker-compose-potgres.yml down -v;docker compose -f docker-compose-potgres.yml up -d;sqd migration:generate; sqd run",
+    "clear:run:locally": "sqd build ; docker compose -f docker-compose-potgres.yml down -v;docker compose -f docker-compose-potgres.yml up -d; sqd run",
+    "run:locally": "docker compose -f docker-compose-potgres.yml up -d; sqd build; sqd run"
   },
   "dependencies": {
     "@ethereum-attestation-service/eas-sdk": "^1.5.0",
-    "@subsquid/archive-registry": "^3.3.0",
-    "@subsquid/evm-processor": "^1.14.1",
-    "@subsquid/graphql-server": "^4.5.0",
+    "@subsquid/archive-registry": "^3.3.2",
+    "@subsquid/evm-processor": "^1.18.1",
+    "@subsquid/graphql-server": "^4.6.0",
     "@subsquid/typeorm-migration": "^1.3.0",
-    "@subsquid/typeorm-store": "^1.2.6",
+    "@subsquid/typeorm-store": "^1.4.0",
     "dotenv": "^16.4.4",
-    "ethers": "^6.11.1",
-    "pg": "^8.11.3",
+    "ethers": "^6.12.1",
+    "pg": "^8.11.5",
+    "type-graphql": "^1.2.0-rc.1",
     "typeorm": "^0.3.20",
-    "zod": "^3.23.4"
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@dotenvx/dotenvx": "^0.35.1",

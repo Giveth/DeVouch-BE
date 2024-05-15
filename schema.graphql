@@ -2,7 +2,7 @@ type ProjectAttestation @entity {
   "UID of the attestation"
   id: ID!
   recipient: String!
-  vouchOrFlag: Boolean!
+  vouch: Boolean!
   txHash: String!
   revoked: Boolean!
   attestorOrganisation: AttestorOrganisation!
@@ -12,9 +12,8 @@ type ProjectAttestation @entity {
 }
 
 type AttestorOrganisation @entity {
-  id: ID!
   "UID of the attestation made the relationship"
-  uid: String!
+  id: ID!
   attestor: Attestor!
   organisation: Organisation!
   "Timestamp at which the relationship was created"
@@ -40,15 +39,16 @@ type Organisation @entity {
   color: String
   "Organization Attestors"
   attestors: [AttestorOrganisation!]! @derivedFrom(field: "organisation")
+  attestedProjects: [OrganisationProject!]! @derivedFrom(field: "organisation")
 }
 
 type Project @entity {
   "Project Source and Project ID separated by a hyphen"
   id: ID!
   "Source of the project"
-  source: String!
+  source: String! @index
   "Project ID. Unique within the source"
-  projectId: String!
+  projectId: String! @index
   "Title of the project"
   title: String
   "Description of the project"
@@ -57,8 +57,18 @@ type Project @entity {
   totalVouches: Int!
   "Total attests with value False"
   totalFlags: Int!
-  # givbackEligibleTrue: Int!
-  # givbackEligibleFalse: Int!
+  "Total attests"
+  totalAttests: Int!
   lastUpdatedTimestamp: DateTime!
   attests: [ProjectAttestation!]! @derivedFrom(field: "project")
+  attestedOrganisations: [OrganisationProject!]! @derivedFrom(field: "project")
+}
+
+type OrganisationProject @entity {
+  "<project>-<organisation>"
+  id: ID!
+  organisation: Organisation!
+  project: Project!
+  vouch: Boolean!
+  count: Int!
 }
