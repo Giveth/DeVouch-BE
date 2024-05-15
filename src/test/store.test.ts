@@ -2,7 +2,7 @@ import { describe, expect, test, afterAll } from "@jest/globals";
 import { closeConnection, getTestCtx } from "./utils";
 import { Organisation } from "../model";
 
-describe.skip("simple storage", () => {
+describe("simple storage", () => {
   afterAll(async () => {
     await closeConnection();
   });

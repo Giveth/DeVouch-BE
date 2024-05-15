@@ -1,5 +1,5 @@
 import { describe, expect, test, afterAll } from "@jest/globals";
-import { closeConnection, getCtx, getEntityManager } from "./utils";
+import { closeConnection, getTestCtx, getTestEntityManager } from "./utils";
 import { getProject } from "../controllers/utils/modelHelper";
 import { Project } from "../model";
 
@@ -9,12 +9,12 @@ describe("get project", () => {
   });
 
   beforeEach(async () => {
-    const em = await getEntityManager();
+    const em = await getTestEntityManager();
     await em.delete(Project, {});
   });
 
   test("handles non-existent projects", async () => {
-    const ctx = await getCtx();
+    const ctx = await getTestCtx();
     const id = "giveth-1";
     const project = await getProject(ctx, "giveth", "1");
     expect(project).toBeDefined();
@@ -22,7 +22,7 @@ describe("get project", () => {
   });
 
   test("fetches an existing project", async () => {
-    const ctx = await getCtx();
+    const ctx = await getTestCtx();
     const id = "giveth-1";
     // create a project manually
     await getProject(ctx, "giveth", "1");
