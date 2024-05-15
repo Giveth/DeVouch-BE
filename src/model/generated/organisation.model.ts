@@ -1,5 +1,6 @@
 import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, Index as Index_, OneToMany as OneToMany_} from "typeorm"
 import {AttestorOrganisation} from "./attestorOrganisation.model"
+import {OrganisationProject} from "./organisationProject.model"
 
 @Entity_()
 export class Organisation {
@@ -37,4 +38,7 @@ export class Organisation {
      */
     @OneToMany_(() => AttestorOrganisation, e => e.organisation)
     attestors!: AttestorOrganisation[]
+
+    @OneToMany_(() => OrganisationProject, e => e.organisation)
+    attestedProjects!: OrganisationProject[]
 }

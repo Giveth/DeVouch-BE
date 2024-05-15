@@ -46,7 +46,9 @@ export const handleAuthorize = async (
   ctx.store.upsert(attestorOrganisation);
 
   ctx.log.debug(
-    `Attestor ${accountAddress} authorized for organisation ${organisation.name}: ${attestorOrganisation}`
+    `Attestor ${accountAddress} authorized for organisation ${
+      organisation.name
+    }: ${JSON.stringify(attestorOrganisation)}`
   );
 };
 

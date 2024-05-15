@@ -39,6 +39,7 @@ type Organisation @entity {
   color: String
   "Organization Attestors"
   attestors: [AttestorOrganisation!]! @derivedFrom(field: "organisation")
+  attestedProjects: [OrganisationProject!]! @derivedFrom(field: "organisation")
 }
 
 type Project @entity {
@@ -56,8 +57,18 @@ type Project @entity {
   totalVouches: Int!
   "Total attests with value False"
   totalFlags: Int!
-  # givbackEligibleTrue: Int!
-  # givbackEligibleFalse: Int!
+  "Total attests"
+  totalAttests: Int!
   lastUpdatedTimestamp: DateTime!
   attests: [ProjectAttestation!]! @derivedFrom(field: "project")
+  attestedOrganisations: [OrganisationProject!]! @derivedFrom(field: "project")
+}
+
+type OrganisationProject @entity {
+  "<project>-<organisation>"
+  id: ID!
+  organisation: Organisation!
+  project: Project!
+  vouch: Boolean!
+  count: Int!
 }
