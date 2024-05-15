@@ -62,7 +62,7 @@ export const handleProjectAttestation = async (
     uid: ${uid}
     schemaUid: ${schemaUid}
     issuer: ${issuer}
-    decodedData: ${JSON.stringify(decodedData, null, 2)}
+    decodedData: ${JSON.stringify(decodedData)}
     projectVerificationAttestation: ${projectVerificationAttestation} 
     `);
     throw new Error("Error parsing project verification attestation");
@@ -124,7 +124,7 @@ export const handleProjectAttestationRevoke = async (
 
   attestation.revoked = true;
   await ctx.store.upsert(attestation);
-  ctx.log.debug(`Revoked project attestation ${attestation}`);
+  ctx.log.debug(`Revoked project attestation ${JSON.stringify(attestation)}`);
 
   await updateProjectAttestationCounts(ctx, attestation.project);
 };

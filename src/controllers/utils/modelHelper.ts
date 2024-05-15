@@ -5,11 +5,9 @@ import {
   Organisation,
   OrganisationProject,
   Project,
-  ProjectAttestation,
 } from "../../model";
 import { getEntityManger } from "./databaseHelper";
 import { ProjectStats } from "./types";
-import { In, Not } from "typeorm";
 
 export const upsertOrganisatoinProject = async (
   ctx: DataHandlerContext<Store>,
@@ -36,8 +34,6 @@ export const updateProjectAttestationCounts = async (
 ): Promise<void> => {
   const em = getEntityManger(ctx);
   const projectStats = await getProjectStats(ctx, project);
-  console.log("projectStats:", projectStats);
-  // throw new Error("Let's exit");
 
   project.totalVouches = projectStats.pr_total_vouches;
   project.totalFlags = projectStats.pr_total_flags;
