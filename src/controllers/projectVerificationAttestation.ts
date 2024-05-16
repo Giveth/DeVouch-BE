@@ -98,7 +98,9 @@ export const handleProjectAttestation = async (
   });
 
   await ctx.store.upsert(projectAttestation);
-  ctx.log.debug(`Upserted project attestation ${projectAttestation}`);
+  ctx.log.debug(
+    `Upserted project attestation ${JSON.stringify(projectAttestation)}`
+  );
 
   await updateProjectAttestationCounts(ctx, project);
 };
