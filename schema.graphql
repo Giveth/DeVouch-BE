@@ -60,7 +60,7 @@ type Project @entity {
   "Total attests"
   totalAttests: Int!
   "Slug of the project"
-  slug: String!
+  slug: String
   "Image of the project"
   image: String
   lastUpdatedTimestamp: DateTime!
