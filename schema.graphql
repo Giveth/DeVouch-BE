@@ -59,6 +59,10 @@ type Project @entity {
   totalFlags: Int!
   "Total attests"
   totalAttests: Int!
+  "Slug of the project"
+  slug: String!
+  "Image of the project"
+  image: String
   lastUpdatedTimestamp: DateTime!
   attests: [ProjectAttestation!]! @derivedFrom(field: "project")
   attestedOrganisations: [OrganisationProject!]! @derivedFrom(field: "project")
