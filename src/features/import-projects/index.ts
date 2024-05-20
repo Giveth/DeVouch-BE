@@ -79,7 +79,6 @@ const updateGivethProjects = async () => {
 export const importProjects = async () => {
   try {
     console.log("Importing Projects");
-    await createEntityManager();
     await updateGivethProjects();
   } catch (error) {
     console.log("Error", error);
