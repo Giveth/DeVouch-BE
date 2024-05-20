@@ -64,6 +64,7 @@ const updateOrCreateProject = async (
 
 const processProjectsBatch = async (projectsBatch: GivethProjectInfo[]) => {
   const dataSource = await getDataSource();
+  if (!dataSource) return;
   for (const project of projectsBatch) {
     console.log("Processing Project: Giveth", project.id);
     await updateOrCreateProject(dataSource, project);
