@@ -1,4 +1,4 @@
-import { graphQLRequest } from "../../helpers/request";
+import { graphQLRequest } from "../../../helpers/request";
 import { GIVETH_API_URL } from "./constants";
 import { GivethProjectInfo } from "./type";
 
