@@ -16,28 +16,49 @@ const updateGivethProject = async () => {
       .getOne();
     if (exitingProject) {
       console.log("Project exists", exitingProject);
-      continue;
+      if (
+        exitingProject?.title === project.title &&
+        exitingProject?.description === project.descriptionSummary &&
+        exitingProject?.slug === project.slug &&
+        exitingProject?.image === project.image
+      ) {
+        continue;
+      }
+      const updatedProject = new Project({
+        ...exitingProject,
+        title: project.title,
+        description: project.descriptionSummary,
+        image: project.image,
+        slug: project.slug,
+        lastUpdatedTimestamp: new Date(),
+      });
+      await dataSource
+        .createQueryBuilder()
+        .update(Project)
+        .set(updatedProject)
+        .where("id = :id", { id: `giveth-${project.id}` })
+        .execute();
+    } else {
+      const newProject = new Project({
+        id: `giveth-${project.id}`,
+        title: project.title,
+        description: project.descriptionSummary,
+        image: project.image,
+        slug: project.slug,
+        projectId: project.id,
+        source: "giveth",
+        totalVouches: 0,
+        totalFlags: 0,
+        totalAttests: 0,
+        lastUpdatedTimestamp: new Date(),
+      });
+      await dataSource
+        .createQueryBuilder()
+        .insert()
+        .into(Project)
+        .values([newProject])
+        .execute();
     }
-    const newProject = new Project({
-      id: `giveth-${project.id}`,
-      title: project.title,
-      description: project.descriptionSummary,
-      // image: project.image,
-      // slug: project.slug,
-      projectId: project.id,
-      source: "giveth",
-      totalVouches: 0,
-      totalFlags: 0,
-      totalAttests: 0,
-      lastUpdatedTimestamp: new Date(),
-    });
-    console.log("newProject", newProject);
-    await dataSource
-      .createQueryBuilder()
-      .insert()
-      .into(Project)
-      .values([newProject])
-      .execute();
   }
 };
 
