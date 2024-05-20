@@ -25,22 +25,20 @@ const updateOrCreateProject = async (
       totalAttests: 0,
     });
   }
-  if (true) {
-    const isUpdated =
-      project.title !== projectInfo.title ||
-      project.description !== projectInfo.descriptionSummary ||
-      project.slug !== projectInfo.slug ||
-      project.image !== projectInfo.image;
+  const isUpdated =
+    project.title !== projectInfo.title ||
+    project.description !== projectInfo.descriptionSummary ||
+    project.slug !== projectInfo.slug ||
+    project.image !== projectInfo.image;
 
-    if (isUpdated) {
-      project.title = projectInfo.title;
-      project.description = projectInfo.descriptionSummary;
-      project.image = projectInfo.image;
-      project.slug = projectInfo.slug;
-      project.lastUpdatedTimestamp = new Date();
+  if (isUpdated) {
+    project.title = projectInfo.title;
+    project.description = projectInfo.descriptionSummary;
+    project.image = projectInfo.image;
+    project.slug = projectInfo.slug;
+    project.lastUpdatedTimestamp = new Date();
 
-      await repository.save(project);
-    }
+    await repository.save(project);
   }
 };
 
