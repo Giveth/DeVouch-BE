@@ -70,7 +70,7 @@ const processProjectsBatch = async (projectsBatch: GivethProjectInfo[]) => {
   }
 };
 
-export const fetchAndProcessGivethProjects = async () => {
+const fetchAndProcessGivethProjects = async () => {
   try {
     let hasMoreProjects = true;
     let skip = 0;
