@@ -6,59 +6,41 @@ import { GivethProjectInfo } from "./type";
 
 const updateOrCreateProject = async (
   dataSource: DataSource,
-  project: GivethProjectInfo
+  projectInfo: GivethProjectInfo
 ) => {
-  const existingProject = await dataSource
-    .getRepository(Project)
-    .createQueryBuilder("project")
-    .where("project.id = :id", { id: `giveth-${project.id}` })
-    .getOne();
+  const projectSource = "giveth";
+  const projectId = projectInfo.id;
+  const projectKey = `${projectSource}-${projectId}`;
+  const repository = dataSource.getRepository(Project);
 
-  if (existingProject) {
-    const isUpdated =
-      existingProject.title !== project.title ||
-      existingProject.description !== project.descriptionSummary ||
-      existingProject.slug !== project.slug ||
-      existingProject.image !== project.image;
+  let project = await repository.findOneBy({ id: projectKey });
 
-    if (isUpdated) {
-      const updatedProject = new Project({
-        ...existingProject,
-        title: project.title,
-        description: project.descriptionSummary,
-        image: project.image,
-        slug: project.slug,
-        lastUpdatedTimestamp: new Date(),
-      });
-
-      await dataSource
-        .createQueryBuilder()
-        .update(Project)
-        .set(updatedProject)
-        .where("id = :id", { id: `giveth-${project.id}` })
-        .execute();
-    }
-  } else {
-    const newProject = new Project({
-      id: `giveth-${project.id}`,
-      title: project.title,
-      description: project.descriptionSummary,
-      image: project.image,
-      slug: project.slug,
-      projectId: project.id,
-      source: "giveth",
+  if (!project) {
+    project = new Project({
+      id: projectId,
+      source: projectSource,
+      projectId,
       totalVouches: 0,
       totalFlags: 0,
       totalAttests: 0,
-      lastUpdatedTimestamp: new Date(),
     });
+  }
+  if (true) {
+    const isUpdated =
+      project.title !== projectInfo.title ||
+      project.description !== projectInfo.descriptionSummary ||
+      project.slug !== projectInfo.slug ||
+      project.image !== projectInfo.image;
 
-    await dataSource
-      .createQueryBuilder()
-      .insert()
-      .into(Project)
-      .values([newProject])
-      .execute();
+    if (isUpdated) {
+      project.title = projectInfo.title;
+      project.description = projectInfo.descriptionSummary;
+      project.image = projectInfo.image;
+      project.slug = projectInfo.slug;
+      project.lastUpdatedTimestamp = new Date();
+
+      await repository.save(project);
+    }
   }
 };
 
