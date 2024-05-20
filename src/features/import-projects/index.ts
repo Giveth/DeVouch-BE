@@ -8,6 +8,7 @@ const updateOrCreateProject = async (
   dataSource: DataSource,
   projectInfo: GivethProjectInfo
 ) => {
+  // These fields can be passed to the function for further reusability
   const projectSource = "giveth";
   const projectId = projectInfo.id;
   const projectKey = `${projectSource}-${projectId}`;
@@ -25,13 +26,13 @@ const updateOrCreateProject = async (
       totalAttests: 0,
     });
   }
-  const isUpdated =
+
+  if (
     project.title !== projectInfo.title ||
     project.description !== projectInfo.descriptionSummary ||
     project.slug !== projectInfo.slug ||
-    project.image !== projectInfo.image;
-
-  if (isUpdated) {
+    project.image !== projectInfo.image
+  ) {
     project.title = projectInfo.title;
     project.description = projectInfo.descriptionSummary;
     project.image = projectInfo.image;
