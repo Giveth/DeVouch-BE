@@ -1,14 +1,19 @@
 import { createOrmConfig } from "@subsquid/typeorm-config";
 import { DataSource } from "typeorm";
 
-let ds: DataSource | undefined = undefined;
+let dataSource: DataSource | undefined = undefined;
 
 export const getDataSource = async () => {
-  if (!ds || !ds.isInitialized) {
+  if (!dataSource || !dataSource.isInitialized) {
     let cfg = createOrmConfig({ projectDir: __dirname + "/../.." });
     (cfg.entities as string[]).push(__dirname + "/../model/generated/*.ts");
 
-    ds = await new DataSource(cfg).initialize();
+    dataSource = await new DataSource(cfg).initialize();
   }
-  return ds;
+  return dataSource;
+};
+
+export const createEntityManager = async () => {
+  const dataSource = await getDataSource();
+  return dataSource.createEntityManager();
 };
