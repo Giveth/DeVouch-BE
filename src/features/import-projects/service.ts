@@ -1,8 +1,10 @@
 import { graphQLRequest } from "../../helpers/request";
+import { GIVETH_API_URL } from "./constants";
 import { GivethProjectInfo } from "./type";
 
 export const fetchGivethProjectsBatch = async (limit: number, skip: number) => {
   const res = await graphQLRequest(
+    GIVETH_API_URL,
     `query ($limit: Int, $skip: Int, $sortingBy: SortingField) {
       allProjects(
         limit: $limit
