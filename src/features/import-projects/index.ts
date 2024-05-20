@@ -15,8 +15,6 @@ const updateOrCreateProject = async (
     .getOne();
 
   if (existingProject) {
-    console.log("Project exists", existingProject);
-
     const isUpdated =
       existingProject.title !== project.title ||
       existingProject.description !== project.descriptionSummary ||
@@ -67,7 +65,7 @@ const updateOrCreateProject = async (
 const processProjectsBatch = async (projectsBatch: GivethProjectInfo[]) => {
   const dataSource = await getDataSource();
   for (const project of projectsBatch) {
-    console.log("Processing Project", project);
+    console.log("Processing Project: Giveth", project.id);
     await updateOrCreateProject(dataSource, project);
   }
 };
