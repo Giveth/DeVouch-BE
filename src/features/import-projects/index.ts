@@ -1,6 +1,6 @@
 import { Project } from "../../model";
-import { createEntityManager, getDataSource } from "../../helpers/db";
-import { fetchGivethProjects } from "./service";
+import { getDataSource } from "../../helpers/db";
+import { fetchGivethProjectsBatch } from "./service";
 import { DataSource } from "typeorm";
 import { GivethProjectInfo } from "./type";
 
@@ -64,22 +64,34 @@ const updateOrCreateProject = async (
   }
 };
 
-const updateGivethProjects = async () => {
-  const projects = await fetchGivethProjects();
-  console.log("Giveth Project Length", projects.length);
-
+const processProjectsBatch = async (projectsBatch: GivethProjectInfo[]) => {
   const dataSource = await getDataSource();
-
-  for (const project of projects) {
-    console.log("Project", project);
+  for (const project of projectsBatch) {
+    console.log("Processing Project", project);
     await updateOrCreateProject(dataSource, project);
+  }
+};
+
+export const fetchAndProcessGivethProjects = async () => {
+  let hasMoreProjects = true;
+  let skip = 0;
+  const limit = 10;
+
+  while (hasMoreProjects) {
+    const projectsBatch = await fetchGivethProjectsBatch(limit, skip);
+    if (projectsBatch.length > 0) {
+      await processProjectsBatch(projectsBatch);
+      skip += limit;
+    } else {
+      hasMoreProjects = false;
+    }
   }
 };
 
 export const importProjects = async () => {
   try {
     console.log("Importing Projects");
-    await updateGivethProjects();
+    await fetchAndProcessGivethProjects();
   } catch (error) {
     console.log("Error", error);
   }
