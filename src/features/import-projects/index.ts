@@ -1,7 +1,7 @@
 import cron from "node-cron";
 import { fetchAndProcessGivethProjects } from "./giveth/helpers";
 
-const task = async () => {
+export const task = async () => {
   console.log("Importing Projects", new Date());
   await fetchAndProcessGivethProjects();
 };
