@@ -1,5 +1,6 @@
 import cron from "node-cron";
 import { fetchAndProcessGivethProjects } from "./giveth/helpers";
+import { CRON_SCHEDULE } from "./config";
 
 export const task = async () => {
   console.log("Importing Projects", new Date());
@@ -9,7 +10,7 @@ export const task = async () => {
 export const importProjects = async () => {
   try {
     console.log("Importing Projects has been scheduled.");
-    cron.schedule("0 0 * * *", task, {
+    cron.schedule(CRON_SCHEDULE, task, {
       scheduled: true,
       timezone: "UTC",
     });
