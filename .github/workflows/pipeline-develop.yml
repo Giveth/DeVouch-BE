@@ -22,7 +22,4 @@ jobs:
           git checkout -- .
           git pull
           docker compose stop devouch squid-db
-          # docker compose rm -v -f devouch squid-db
-          # docker rmi -f $(docker images | grep 'devouch' | awk '{print $3}')
-          # docker volume rm $(docker volume ls | grep 'db-data' | awk '{print $2}')
           docker compose up -d --build
