@@ -12,3 +12,6 @@ export const PROJECT_VERIFY_SCHEMA = assertNotNull(
 ).toLocaleLowerCase();
 
 export const START_BLOCK = parseInt(process.env.START_BLOCK || "5815457");
+
+export const IMPORT_PROJECT_CRON_SCHEDULE =
+  process.env.IMPORT_PROJECT_CRON_SCHEDULE || "0 0 * * *"; // UTC
