@@ -58,6 +58,18 @@ export class Project {
     @Column_("int4", {nullable: false})
     totalAttests!: number
 
+    /**
+     * Slug of the project
+     */
+    @Column_("text", {nullable: true})
+    slug!: string | undefined | null
+
+    /**
+     * Image of the project
+     */
+    @Column_("text", {nullable: true})
+    image!: string | undefined | null
+
     @Column_("timestamp with time zone", {nullable: false})
     lastUpdatedTimestamp!: Date
 

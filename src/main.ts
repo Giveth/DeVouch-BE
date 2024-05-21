@@ -3,6 +3,7 @@ import { processor } from "./processor";
 import * as EASContract from "./abi/EAS";
 import { processAttest } from "./mappings/attest";
 import { processRevokeLog } from "./mappings/revoke";
+import { importProjects } from "./features/import-projects/index";
 
 processor.run(new TypeormDatabase({ supportHotBlocks: false }), async (ctx) => {
   for (let _block of ctx.blocks) {
@@ -18,3 +19,5 @@ processor.run(new TypeormDatabase({ supportHotBlocks: false }), async (ctx) => {
     }
   }
 });
+
+importProjects();
