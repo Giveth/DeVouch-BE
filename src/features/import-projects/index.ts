@@ -9,7 +9,9 @@ export const task = async () => {
 
 export const importProjects = async () => {
   try {
-    console.log("Importing Projects has been scheduled.");
+    console.log(
+      `Importing Projects scheduling ${IMPORT_PROJECT_CRON_SCHEDULE}.`
+    );
     cron.schedule(IMPORT_PROJECT_CRON_SCHEDULE, task, {
       scheduled: true,
       timezone: "UTC",
