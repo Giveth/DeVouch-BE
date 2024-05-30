@@ -1,5 +1,5 @@
 {
-  "name": "squid-evm-template",
+  "name": "devouch-squid-backend",
   "private": true,
   "scripts": {
     "build": "rm -rf lib && tsc",

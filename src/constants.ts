@@ -1,17 +1,31 @@
-import { assertNotNull } from "@subsquid/evm-processor";
+import { assertNotNull } from '@subsquid/evm-processor';
+
+const SQUID_NETWORK = process.env.SQUID_NETWORK || 'eth-sepolia';
+
+const IS_PRODUCTION = SQUID_NETWORK === 'optimism-mainnet';
 
 export const EAS_CONTRACT_ADDRESS = assertNotNull(
-  process.env.EAS_CONTRACT_ADDRESS
+  IS_PRODUCTION
+    ? '0x4200000000000000000000000000000000000021'
+    : '0xC2679fBD37d54388Ce493F1DB75320D236e1815e'
 );
 export const SCHEMA_CONTRACT_ADDRESS = assertNotNull(
-  process.env.SCHEMA_CONTRACT_ADDRESS
+  IS_PRODUCTION
+    ? '0x4200000000000000000000000000000000000020'
+    : '0x0a7E2Ff54e76B8E6659aedc9103FB21c038050D0'
 );
 
 export const PROJECT_VERIFY_SCHEMA = assertNotNull(
   process.env.PROJECT_VERIFY_ATTESTATION_SCHEMA
 ).toLocaleLowerCase();
 
-export const START_BLOCK = parseInt(process.env.START_BLOCK || "5815457");
+export const LOOKUP_ARCHIVE = IS_PRODUCTION
+  ? 'https://v2.archive.subsquid.io/network/optimism-mainnet'
+  : 'https://v2.archive.subsquid.io/network/ethereum-sepolia';
+
+export const START_BLOCK = parseInt(
+  IS_PRODUCTION ? '119837389' : process.env.START_BLOCK || '5815457'
+);
 
 export const IMPORT_PROJECT_CRON_SCHEDULE =
-  process.env.IMPORT_PROJECT_CRON_SCHEDULE || "0 0 * * *"; // UTC
+  process.env.IMPORT_PROJECT_CRON_SCHEDULE || '0 0 * * *'; // UTC
