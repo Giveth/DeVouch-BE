@@ -9,7 +9,7 @@ export const fetchRpgf3Projects = async () => {
       "Content-Type": "application/json",
     },
   });
-  let data: Rpgf3ProjectInfo[] = await res.json();
+  const data: Rpgf3ProjectInfo[] = await res.json();
 
   return data;
 };
