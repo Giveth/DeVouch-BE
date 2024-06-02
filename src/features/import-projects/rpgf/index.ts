@@ -1,6 +1,7 @@
 import { getDataSource } from "../../../helpers/db";
+import { updateOrCreateProject } from "../helpers";
+import { rpgf3SourceConfig } from "./constants";
 import { fetchRpgf3Projects } from "./service";
-import { updateOrCreateProject } from "./helpers";
 
 export const fetchAndProcessRpgf3Projects = async () => {
   const data = await fetchRpgf3Projects();
@@ -9,6 +10,6 @@ export const fetchAndProcessRpgf3Projects = async () => {
   if (!dataSource) return;
   for (const project of data) {
     if (project.type.toLowerCase() !== "project") continue;
-    await updateOrCreateProject(dataSource, project);
+    await updateOrCreateProject(dataSource, project, rpgf3SourceConfig);
   }
 };
