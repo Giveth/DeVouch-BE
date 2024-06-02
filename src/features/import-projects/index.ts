@@ -1,10 +1,12 @@
 import cron from "node-cron";
-import { fetchAndProcessGivethProjects } from "./giveth/helpers";
 import { IMPORT_PROJECT_CRON_SCHEDULE } from "../../constants";
+import { fetchAndProcessGivethProjects } from "./giveth/index";
+import { fetchAndProcessRpgf3Projects } from "./rpgf";
 
 export const task = async () => {
   console.log("Importing Projects", new Date());
   await fetchAndProcessGivethProjects();
+  await fetchAndProcessRpgf3Projects();
 };
 
 export const importProjects = async () => {
