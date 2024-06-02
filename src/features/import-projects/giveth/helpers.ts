@@ -62,31 +62,13 @@ const updateOrCreateProject = async (
   }
 };
 
-const processProjectsBatch = async (projectsBatch: GivethProjectInfo[]) => {
+export const processProjectsBatch = async (
+  projectsBatch: GivethProjectInfo[]
+) => {
   const dataSource = await getDataSource();
   if (!dataSource) return;
   for (const project of projectsBatch) {
     console.log("Processing Project: Giveth", project.id);
     await updateOrCreateProject(dataSource, project);
-  }
-};
-
-export const fetchAndProcessGivethProjects = async () => {
-  try {
-    let hasMoreProjects = true;
-    let skip = 0;
-    const limit = 10;
-
-    while (hasMoreProjects) {
-      const projectsBatch = await fetchGivethProjectsBatch(limit, skip);
-      if (projectsBatch.length > 0) {
-        await processProjectsBatch(projectsBatch);
-        skip += limit;
-      } else {
-        hasMoreProjects = false;
-      }
-    }
-  } catch (error: any) {
-    console.log("error on fetching giveth projects", error.message);
   }
 };
