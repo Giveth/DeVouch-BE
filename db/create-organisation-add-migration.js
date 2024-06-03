@@ -16,7 +16,7 @@ exports.default = function createOrganisationAddMigration(
 
   // create ./migrations/${fileName}
   fs.writeFileSync(
-    __dirname + "/migrations/" + fileName,
+    `${__dirname}/migrations/${fileName}`,
     `module.exports = class ${className} {
     name = "${className}";
 
