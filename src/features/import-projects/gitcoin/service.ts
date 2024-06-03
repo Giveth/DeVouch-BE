@@ -33,22 +33,3 @@ export const fetchGitcoinProjectsBatch = async (
     return [];
   }
 };
-
-export const fetchGitcoinProjects = async () => {
-  let allProjects: GitcoinProjectInfo[] = [];
-  let hasMoreProjects = true;
-  let offset = 0;
-  const first = 10;
-
-  while (hasMoreProjects) {
-    const projectsBatch = await fetchGitcoinProjectsBatch(first, offset);
-    if (projectsBatch.length > 0) {
-      allProjects = allProjects.concat(projectsBatch);
-      offset += first;
-    } else {
-      hasMoreProjects = false;
-    }
-  }
-
-  return allProjects;
-};
