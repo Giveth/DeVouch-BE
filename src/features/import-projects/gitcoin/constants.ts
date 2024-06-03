@@ -1,6 +1,6 @@
 export const GITCOIN_API_URL =
   process.env.GITCOIN_API_URL ||
-  "https://grants-stack-indexer-v2.gitcoin.co/graphiql";
+  "https://grants-stack-indexer-v2.gitcoin.co/graphql";
 
 export const gitcoinSourceConfig: SourceConfig = {
   source: "gitcoin",
@@ -8,5 +8,5 @@ export const gitcoinSourceConfig: SourceConfig = {
   titleField: "title",
   descriptionField: "description",
   slugField: "slug",
-  imageField: "bannerImg",
+  imageField: "image",
 };
