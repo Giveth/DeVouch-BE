@@ -1,6 +1,6 @@
 import type { GitcoinProjectInfo } from "./type";
 import { updateOrCreateProject } from "../helpers";
-import { gitcoinSourceConfig } from "./constants";
+import { IPFS_GATEWAY, gitcoinSourceConfig } from "./constants";
 
 const generateGitcoinSlug = (project: GitcoinProjectInfo) => {
   const application = project.applications[0];
@@ -17,6 +17,10 @@ const generateGitcoinSlug = (project: GitcoinProjectInfo) => {
   return `#/round/${chainId}/${roundId}/${id}`;
 };
 
+const convertIpfsHashToHttps = (hash: string) => {
+  return `${IPFS_GATEWAY}/${hash}`;
+};
+
 export const processProjectsBatch = async (
   projectsBatch: GitcoinProjectInfo[]
 ) => {
@@ -27,7 +31,9 @@ export const processProjectsBatch = async (
       title: project.name || project.metadata?.title,
       description: project.metadata?.description,
       slug: generateGitcoinSlug(project),
-      image: project.metadata?.bannerImg,
+      image: project.metadata?.bannerImg
+        ? convertIpfsHashToHttps(project.metadata?.bannerImg)
+        : "",
     };
     await updateOrCreateProject(processedProject, gitcoinSourceConfig);
   }
