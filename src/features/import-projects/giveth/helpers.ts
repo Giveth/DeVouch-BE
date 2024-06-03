@@ -1,5 +1,5 @@
 import { getDataSource } from "../../../helpers/db";
-import { GivethProjectInfo } from "./type";
+import { type GivethProjectInfo } from "./type";
 import { updateOrCreateProject } from "../helpers";
 import { givethSourceConfig } from "./constants";
 
