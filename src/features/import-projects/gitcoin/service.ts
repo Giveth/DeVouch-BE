@@ -28,7 +28,7 @@ export const fetchGitcoinProjectsBatch = async (
       }
     );
 
-    return res.data.allProjects.projects;
+    return res.data.projects;
   } catch (error: any) {
     console.log("error on fetchGitcoinProjectsBatch", error.message);
     return [];
