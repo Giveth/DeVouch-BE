@@ -5,8 +5,8 @@ import { fetchAndProcessRpgf3Projects } from "./rpgf";
 
 export const task = async () => {
   console.log("Importing Projects", new Date());
-  await fetchAndProcessGivethProjects();
-  await fetchAndProcessRpgf3Projects();
+  fetchAndProcessGivethProjects();
+  fetchAndProcessRpgf3Projects();
 };
 
 export const importProjects = async () => {
