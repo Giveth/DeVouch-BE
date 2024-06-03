@@ -34,22 +34,3 @@ export const fetchGivethProjectsBatch = async (limit: number, skip: number) => {
     return [];
   }
 };
-
-export const fetchGivethProjects = async () => {
-  let allProjects: GivethProjectInfo[] = [];
-  let hasMoreProjects = true;
-  let skip = 0;
-  const limit = 10;
-
-  while (hasMoreProjects) {
-    const projectsBatch = await fetchGivethProjectsBatch(limit, skip);
-    if (projectsBatch.length > 0) {
-      allProjects = allProjects.concat(projectsBatch);
-      skip += limit;
-    } else {
-      hasMoreProjects = false;
-    }
-  }
-
-  return allProjects;
-};
