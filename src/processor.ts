@@ -1,4 +1,4 @@
-import { assertNotNull } from '@subsquid/util-internal';
+import { assertNotNull } from "@subsquid/util-internal";
 import {
   BlockHeader,
   DataHandlerContext,
@@ -6,10 +6,10 @@ import {
   EvmBatchProcessorFields,
   Log as _Log,
   Transaction as _Transaction,
-} from '@subsquid/evm-processor';
+} from "@subsquid/evm-processor";
 
-import * as EASContract from './abi/EAS';
-import { EAS_CONTRACT_ADDRESS, LOOKUP_ARCHIVE, START_BLOCK } from './constants';
+import * as EASContract from "./abi/EAS";
+import { EAS_CONTRACT_ADDRESS, LOOKUP_ARCHIVE, START_BLOCK } from "./constants";
 
 export const processor = new EvmBatchProcessor()
   // Lookup archive by the network name in Subsquid registry
