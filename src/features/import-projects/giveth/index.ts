@@ -17,6 +17,6 @@ export const fetchAndProcessGivethProjects = async () => {
       }
     }
   } catch (error: any) {
-    console.log("error on fetching giveth projects", error.message);
+    console.log("error on fetchAndProcessGivethProjects", error.message);
   }
 };

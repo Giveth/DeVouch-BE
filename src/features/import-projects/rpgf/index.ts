@@ -12,6 +12,6 @@ export const fetchAndProcessRpgf3Projects = async () => {
       await updateOrCreateProject(project, rpgf3SourceConfig);
     }
   } catch (error: any) {
-    console.log("error on fetching RPGF3 projects", error.message);
+    console.log("error on fetchAndProcessRpgf3Projects", error.message);
   }
 };
