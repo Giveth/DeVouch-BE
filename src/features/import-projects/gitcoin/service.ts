@@ -4,7 +4,7 @@ import { GitcoinProjectInfo } from "./type";
 
 export const fetchGitcoinProjectsBatch = async (
   first: number,
-  skip: number
+  offset: number
 ) => {
   try {
     const res = await graphQLRequest(
@@ -23,8 +23,7 @@ export const fetchGitcoinProjectsBatch = async (
       }`,
       {
         first,
-        skip,
-        sortingBy: "Newest",
+        offset,
       }
     );
 
@@ -38,14 +37,14 @@ export const fetchGitcoinProjectsBatch = async (
 export const fetchGitcoinProjects = async () => {
   let allProjects: GitcoinProjectInfo[] = [];
   let hasMoreProjects = true;
-  let skip = 0;
+  let offset = 0;
   const first = 10;
 
   while (hasMoreProjects) {
-    const projectsBatch = await fetchGitcoinProjectsBatch(first, skip);
+    const projectsBatch = await fetchGitcoinProjectsBatch(first, offset);
     if (projectsBatch.length > 0) {
       allProjects = allProjects.concat(projectsBatch);
-      skip += first;
+      offset += first;
     } else {
       hasMoreProjects = false;
     }
