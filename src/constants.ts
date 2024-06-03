@@ -24,7 +24,7 @@ export const LOOKUP_ARCHIVE = IS_PRODUCTION
   : "https://v2.archive.subsquid.io/network/ethereum-sepolia";
 
 export const START_BLOCK = Number.parseInt(
-  process.env.START_BLOCK || IS_PRODUCTION ? "119837389" : "5815457"
+  process.env.START_BLOCK || (IS_PRODUCTION ? "119837389" : "5815457")
 );
 
 export const IMPORT_PROJECT_CRON_SCHEDULE =
