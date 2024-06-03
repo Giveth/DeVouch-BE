@@ -1,8 +1,8 @@
 import { type DataSource } from "typeorm";
 import { Project } from "../../model";
+import { getDataSource } from "../../helpers/db";
 
 export const updateOrCreateProject = async (
-  dataSource: DataSource,
   project: any,
   sourConfig: SourceConfig
 ) => {
@@ -15,10 +15,15 @@ export const updateOrCreateProject = async (
     imageField,
   } = sourConfig;
 
+  const id = `${source}-${project[idField]}`;
+
+  const dataSource = await getDataSource();
+  if (!dataSource) return;
+
   const existingProject = await dataSource
     .getRepository(Project)
     .createQueryBuilder("project")
-    .where("project.id = :id", { id: `${source}-${project[idField]}` })
+    .where("project.id = :id", { id })
     .getOne();
 
   if (existingProject) {
@@ -42,12 +47,14 @@ export const updateOrCreateProject = async (
         .createQueryBuilder()
         .update(Project)
         .set(updatedProject)
-        .where("id = :id", { id: `${source}-${project[idField]}` })
+        .where("id = :id", { id })
         .execute();
+
+      console.log(new Date(), "Project Updated: ", id);
     }
   } else {
     const newProject = new Project({
-      id: `${source}-${project[idField]}`,
+      id,
       title: project[titleField],
       description: project[descriptionField],
       image: project[imageField],
@@ -66,5 +73,7 @@ export const updateOrCreateProject = async (
       .into(Project)
       .values([newProject])
       .execute();
+
+    console.log(new Date(), "Project Created: ", id);
   }
 };
