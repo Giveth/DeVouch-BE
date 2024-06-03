@@ -4,6 +4,8 @@ export const GITCOIN_API_URL =
 
 export const IPFS_GATEWAY = process.env.IPFS_GATEWAY || "https://ipfs.io/ipfs";
 
+export const GITCOIN_API_LIMIT = 100;
+
 export const gitcoinSourceConfig: SourceConfig = {
   source: "gitcoin",
   idField: "id",

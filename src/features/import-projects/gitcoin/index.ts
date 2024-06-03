@@ -1,3 +1,4 @@
+import { GITCOIN_API_LIMIT } from "./constants";
 import { processProjectsBatch } from "./helpers";
 import { fetchGitcoinProjectsBatch } from "./service";
 
@@ -5,7 +6,7 @@ export const fetchAndProcessGitcoinProjects = async () => {
   try {
     let hasMoreProjects = true;
     let skip = 0;
-    const limit = 10;
+    const limit = GITCOIN_API_LIMIT;
 
     while (hasMoreProjects) {
       const projectsBatch = await fetchGitcoinProjectsBatch(limit, skip);
