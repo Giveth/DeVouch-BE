@@ -6,13 +6,17 @@ const SCHEMA_ID =
   "0xf63f2a7159ee674aa6fce42196a8bb0605eafcf20c19e91a7eafba8d39fa0404"; // Replace with your own schema id
 const AUTHORIZED_ATTESTOR = "0x826976d7C600d45FB8287CA1d7c76FC8eb732030";
 const COLOR = "#7f64cb";
+// staging: eth-sepolia
+// production: optimism-mainnet
+const network = "eth-sepolia";
 
 function main() {
   createOrganisationAddMigration(
     ORGANISATION_NAME,
     SCHEMA_ID,
     AUTHORIZED_ATTESTOR,
-    COLOR
+    COLOR,
+    network
   );
 }
 
