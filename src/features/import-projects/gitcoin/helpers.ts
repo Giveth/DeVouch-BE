@@ -1,4 +1,3 @@
-import { getDataSource } from "../../../helpers/db";
 import type { GitcoinProjectInfo } from "./type";
 import { updateOrCreateProject } from "../helpers";
 import { gitcoinSourceConfig } from "./constants";
