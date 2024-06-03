@@ -18,7 +18,12 @@ export const updateOrCreateProject = async (
   const id = `${source}-${project[idField]}`;
 
   const dataSource = await getDataSource();
-  if (!dataSource) return;
+  if (!dataSource) {
+    console.log(
+      `[${new Date().toISOString()}] - ERROR: Failed to UPSERT project. Data source not found. Project ID: ${id}`
+    );
+    return;
+  }
 
   const existingProject = await dataSource
     .getRepository(Project)
@@ -50,7 +55,9 @@ export const updateOrCreateProject = async (
         .where("id = :id", { id })
         .execute();
 
-      console.log(new Date(), "Project Updated: ", id);
+      console.log(
+        `[${new Date().toISOString()}] - INFO: Project Updated. Project ID: ${id}`
+      );
     }
   } else {
     const newProject = new Project({
@@ -74,6 +81,8 @@ export const updateOrCreateProject = async (
       .values([newProject])
       .execute();
 
-    console.log(new Date(), "Project Created: ", id);
+    console.log(
+      `[${new Date().toISOString()}] - INFO: Project Created. Project ID: ${id}`
+    );
   }
 };
