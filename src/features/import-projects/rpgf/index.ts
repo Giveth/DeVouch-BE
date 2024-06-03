@@ -1,4 +1,3 @@
-import { getDataSource } from "../../../helpers/db";
 import { updateOrCreateProject } from "../helpers";
 import { rpgf3SourceConfig } from "./constants";
 import { fetchRpgf3Projects } from "./service";

@@ -7,7 +7,8 @@ exports.default = function createOrganisationAddMigration(
   organisationName,
   schemaId,
   authorizedAttestor,
-  color = null
+  color = null,
+  network = "eth-sepolia"
 ) {
   const timestamp = new Date().getTime() + ADD_ORG_MIGRATION_OFFSET;
   const fileName = `${timestamp}-Add${organisationName}.js`;
@@ -15,12 +16,13 @@ exports.default = function createOrganisationAddMigration(
 
   // create ./migrations/${fileName}
   fs.writeFileSync(
-    __dirname + "/migrations/" + fileName,
-    `
-module.exports = class ${className} {
+    `${__dirname}/migrations/${fileName}`,
+    `module.exports = class ${className} {
     name = "${className}";
-    
+
     async up(db) {
+        const SQUID_NETWORK = process.env.SQUID_NETWORK || "eth-sepolia";
+        if (SQUID_NETWORK !== "${network}") return;
         // add organisation with name "${organisationName}" and schema id "${schemaId}"
         await db.query(
         \`INSERT INTO "organisation" ("id", "name", "issuer", "color") 
@@ -34,6 +36,8 @@ module.exports = class ${className} {
     }
     
     async down(db) {
+        const SQUID_NETWORK = process.env.SQUID_NETWORK || "eth-sepolia";
+        if (SQUID_NETWORK !== "${network}") return;
         // remove organisation with name "${organisationName}" and schema id "${schemaId}"
         await db.query(
         \`DELETE FROM "organisation" WHERE "id" = '${schemaId.toLocaleLowerCase()}'\`

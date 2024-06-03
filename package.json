@@ -1,8 +1,9 @@
 {
-  "name": "squid-evm-template",
+  "name": "devouch-squid-backend",
   "private": true,
   "scripts": {
     "build": "rm -rf lib && tsc",
+    "prettier:write": "prettier --write **/*.ts",
     "test:run-migration": "dotenvx run --env-file=.env.test -- squid-typeorm-migration apply",
     "test:run-fresh-db": "docker-compose -f docker-compose-potgres-test.yml down -v; docker-compose --env-file .env.test -f docker-compose-potgres-test.yml up -d",
     "test": "npm run test:run-fresh-db; dotenvx run --env-file=.env.test -- jest --runInBand",
@@ -33,6 +34,7 @@
     "@types/node": "^20.11.17",
     "@types/node-cron": "^3.0.11",
     "jest": "^29.7.0",
+    "prettier": "^3.3.0",
     "ts-jest": "^29.1.2",
     "ts-node": "^10.9.2",
     "typescript": "~5.3.3"
