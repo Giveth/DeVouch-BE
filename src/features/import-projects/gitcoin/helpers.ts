@@ -22,12 +22,13 @@ export const processProjectsBatch = async (
   projectsBatch: GitcoinProjectInfo[]
 ) => {
   for (const project of projectsBatch) {
+    if (project.metadata?.type !== "project") continue;
     const processedProject = {
       id: project.id,
-      title: project.metadata.title,
-      description: project.metadata.description,
+      title: project.name || project.metadata?.title,
+      description: project.metadata?.description,
       slug: generateGitcoinSlug(project),
-      image: project.metadata.bannerImg,
+      image: project.metadata?.bannerImg,
     };
     await updateOrCreateProject(processedProject, gitcoinSourceConfig);
   }
