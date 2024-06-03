@@ -11,7 +11,7 @@ const generateGitcoinSlug = (project: GitcoinProjectInfo) => {
     !application?.chainId ||
     !application?.id
   )
-    return ``;
+    return "";
 
   const { chainId, roundId, id } = application;
   return `#/round/${chainId}/${roundId}/${id}`;
