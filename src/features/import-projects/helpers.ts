@@ -15,7 +15,8 @@ export const updateOrCreateProject = async (
     imageField,
   } = sourConfig;
 
-  const id = `${source}-${project[idField].toLowerCase()}`;
+  const projectId = project[idField].toLowerCase();
+  const id = `${source}-${projectId}`;
 
   const dataSource = await getDataSource();
   if (!dataSource) {
@@ -66,7 +67,7 @@ export const updateOrCreateProject = async (
       description: project[descriptionField],
       image: project[imageField],
       slug: project[slugField],
-      projectId: project[idField],
+      projectId: projectId,
       source: source,
       totalVouches: 0,
       totalFlags: 0,
