@@ -8,3 +8,6 @@
 /.idea
 /.vscode
 /.env
+
+# Backup file
+.env.backup

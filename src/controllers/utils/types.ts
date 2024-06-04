@@ -49,7 +49,7 @@ export const ProjectStats = z.object({
   pr_total_attestations: nullableIntType,
   org_flags: orgCountTuplesTypes,
   org_vouches: orgCountTuplesTypes,
-  uniq_orgs: z.array(z.string()),
+  uniq_orgs: z.array(z.string()).nullable(),
 });
 
 export type ProjectStats = z.infer<typeof ProjectStats>;
