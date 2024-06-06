@@ -6,11 +6,11 @@ export const fetchGivethProjectsBatch = async (limit: number, skip: number) => {
   try {
     const res = await graphQLRequest(
       GIVETH_API_URL,
-      `query ($limit: Int, $skip: Int, $sortingBy: SortingField) {
+      `query ($limit: Int, $skip: Int) {
         allProjects(
           limit: $limit
           skip: $skip
-          sortingBy: $sortingBy
+          sortingBy: Newest
         ) {
           projects {
             id
@@ -24,9 +24,10 @@ export const fetchGivethProjectsBatch = async (limit: number, skip: number) => {
       {
         limit,
         skip,
-        sortingBy: "Newest",
       }
     );
+
+    console.log('res', res)
 
     return res.data.allProjects.projects;
   } catch (error: any) {
