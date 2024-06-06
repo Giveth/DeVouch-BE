@@ -11,7 +11,7 @@ export const updateOrCreateProject = async (
     idField,
     titleField,
     descriptionField,
-    slugField,
+    urlField,
     imageField,
   } = sourConfig;
 
@@ -36,7 +36,7 @@ export const updateOrCreateProject = async (
     const isUpdated =
       existingProject.title !== project[titleField] ||
       existingProject.description !== project[descriptionField] ||
-      existingProject.url !== project[slugField] ||
+      existingProject.url !== project[urlField] ||
       existingProject.image !== project[imageField];
 
     if (isUpdated) {
@@ -45,7 +45,7 @@ export const updateOrCreateProject = async (
         title: project[titleField],
         description: project[descriptionField],
         image: project[imageField],
-        url: project[slugField],
+        url: project[urlField],
         lastUpdatedTimestamp: new Date(),
         imported: true,
       });
@@ -67,7 +67,7 @@ export const updateOrCreateProject = async (
       title: project[titleField],
       description: project[descriptionField],
       image: project[imageField],
-      url: project[slugField],
+      url: project[urlField],
       projectId: projectId,
       source: source,
       totalVouches: 0,
