@@ -59,7 +59,7 @@ export class Project {
     totalAttests!: number
 
     /**
-     * Slug of the project
+     * Url of the project
      */
     @Column_("text", {nullable: true})
     url!: string | undefined | null
