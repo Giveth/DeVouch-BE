@@ -1,0 +1,24 @@
+name: stop-devouch-main
+
+on:
+  workflow_dispatch:
+
+jobs:
+
+  stop:
+    name: Stop Devouch
+    runs-on: ubuntu-latest
+    steps:
+    - name: Stop Devouch
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.PROD_HOST }}
+        username: ${{ secrets.PROD_USERNAME }}
+        key: ${{ secrets.PROD_PRIVATE_KEY }}
+        port: 22
+        script: |
+          cd $HOME/DeVouch-BE
+          docker compose stop devouch squid-db
+          docker compose rm -f -v devouch squid-db
+          docker rmi -f $(docker images | grep 'devouch' | awk '{print $3}')
+          docker volume rm $(docker volume ls | grep 'db-data' | awk '{print $2}')
