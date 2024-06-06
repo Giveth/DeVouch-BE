@@ -15,9 +15,8 @@ export const handleAuthorize = async (
     recipient,
   } = EASContract.events.Attested.decode(log);
 
-  const organisationId = schemaUid.toLocaleLowerCase();
   const organisation = await ctx.store.findOneBy(Organisation, {
-    id: organisationId,
+    id: schemaUid.toLocaleLowerCase(),
     issuer: issuer.toLocaleLowerCase(),
   });
 
@@ -34,7 +33,7 @@ export const handleAuthorize = async (
 
   const attestor = await getAttestor(ctx, accountAddress);
 
-  const key = `${organisationId}-${accountAddress}`;
+  const key = uid.toLocaleLowerCase();
 
   let attestorOrganisation: AttestorOrganisation = new AttestorOrganisation({
     id: key,
