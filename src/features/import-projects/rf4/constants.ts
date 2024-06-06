@@ -6,6 +6,6 @@ export const rf4SourceConfig: SourceConfig = {
   idField: "id",
   titleField: "name",
   descriptionField: "description",
-  slugField: "url",
   imageField: "bannerImageUrl",
+  urlField: "url",
 };

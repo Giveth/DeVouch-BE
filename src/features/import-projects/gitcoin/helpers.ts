@@ -2,7 +2,7 @@ import type { GitcoinProjectInfo } from "./type";
 import { updateOrCreateProject } from "../helpers";
 import { IPFS_GATEWAY, gitcoinSourceConfig } from "./constants";
 
-const generateGitcoinSlug = (project: GitcoinProjectInfo) => {
+const generateGitcoinUrl = (project: GitcoinProjectInfo) => {
   const application = project.applications[0];
 
   if (
@@ -30,7 +30,7 @@ export const processProjectsBatch = async (
       id: project.id,
       title: project.name || project.metadata?.title,
       description: project.metadata?.description,
-      url: generateGitcoinSlug(project),
+      url: generateGitcoinUrl(project),
       image: project.metadata?.bannerImg
         ? convertIpfsHashToHttps(project.metadata?.bannerImg)
         : "",

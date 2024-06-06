@@ -6,6 +6,6 @@ export const rpgf3SourceConfig: SourceConfig = {
   idField: "RPGF3Id",
   titleField: "name",
   descriptionField: "impactDescription",
-  slugField: "url",
+  urlField: "url",
   imageField: "image",
 };

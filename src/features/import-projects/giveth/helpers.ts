@@ -3,10 +3,18 @@ import { type GivethProjectInfo } from "./type";
 import { updateOrCreateProject } from "../helpers";
 import { givethSourceConfig } from "./constants";
 
+export const generateGivethUrl = (project: GivethProjectInfo) => {
+  return `/project/${project.slug}`;
+};
+
 export const processProjectsBatch = async (
   projectsBatch: GivethProjectInfo[]
 ) => {
   for (const project of projectsBatch) {
-    await updateOrCreateProject(project, givethSourceConfig);
+    const processedProject = {
+      ...project,
+      url: generateGivethUrl(project),
+    };
+    await updateOrCreateProject(processedProject, givethSourceConfig);
   }
 };

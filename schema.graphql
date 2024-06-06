@@ -57,7 +57,7 @@ type Project @entity {
   totalFlags: Int!
   "Total attests"
   totalAttests: Int!
-  "Slug of the project"
+  "Url of the project"
   url: String
   "Image of the project"
   image: String
