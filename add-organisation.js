@@ -1,14 +1,14 @@
 const createOrganisationAddMigration =
   require("./db/create-organisation-add-migration").default;
 
-const ORGANISATION_NAME = "Honorary Mexican"; // Replace with your own organisation name
+const ORGANISATION_NAME = "RF 4 Badgeholder"; // Replace with your own organisation name
 const SCHEMA_ID =
-  "0xc80d5c0209976a6c994aa6dc3680f4ad2de2dbc1aa9f46164c251ad9e5e10e09"; // Replace with your own schema id
-const AUTHORIZED_ATTESTOR = "0x826976d7C600d45FB8287CA1d7c76FC8eb732030";
-const COLOR = "#ff0022";
+  "0xfdcfdad2dbe7489e0ce56b260348b7f14e8365a8a325aef9834818c00d46b31b"; // Replace with your own schema id
+const AUTHORIZED_ATTESTOR = "0xE4553b743E74dA3424Ac51f8C1E586fd43aE226F";
+const COLOR = "#ff0420";
 // staging: eth-sepolia
 // production: optimism-mainnet
-const network = "eth-sepolia";
+const network = "optimism-mainnet";
 
 function main() {
   createOrganisationAddMigration(
