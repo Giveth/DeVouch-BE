@@ -1,8 +1,8 @@
-name: auto-deploy-develop
+name: auto-deploy-main
 on:
   push:
     branches:
-      - develop
+      - main
 jobs:
 
   deploy:
@@ -12,13 +12,13 @@ jobs:
     - name: Production Auto-Deploy
       uses: appleboy/ssh-action@v1.0.3
       with:
-        host: ${{ secrets.STAGING_HOST }}
-        username: ${{ secrets.STAGING_USERNAME }}
-        key: ${{ secrets.STAGING_PRIVATE_KEY }}
+        host: ${{ secrets.PROD_HOST }}
+        username: ${{ secrets.PROD_USERNAME }}
+        key: ${{ secrets.PROD_PRIVATE_KEY }}
         port: 22
         script: |
           cd $HOME/DeVouch-BE
-          git checkout develop
+          git checkout main
           git checkout -- .
           git pull
           docker compose stop devouch squid-db

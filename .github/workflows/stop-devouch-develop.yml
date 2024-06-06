@@ -1,4 +1,4 @@
-name: stop-devouch
+name: stop-devouch-develop
 
 on:
   workflow_dispatch:
