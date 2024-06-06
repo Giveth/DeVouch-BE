@@ -9,7 +9,7 @@ jobs:
     name: Deploy
     runs-on: ubuntu-latest
     steps:
-    - name: Production Auto-Deploy
+    - name: Staging Auto-Deploy
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.STAGING_HOST }}
