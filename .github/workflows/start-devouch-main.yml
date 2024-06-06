@@ -1,4 +1,4 @@
-name: start-devouch
+name: start-devouch-main
 
 on:
   workflow_dispatch:
@@ -12,9 +12,9 @@ jobs:
     - name: Start Devouch
       uses: appleboy/ssh-action@v1.0.3
       with:
-        host: ${{ secrets.STAGING_HOST }}
-        username: ${{ secrets.STAGING_USERNAME }}
-        key: ${{ secrets.STAGING_PRIVATE_KEY }}
+        host: ${{ secrets.PROD_HOST }}
+        username: ${{ secrets.PROD_USERNAME }}
+        key: ${{ secrets.PROD_PRIVATE_KEY }}
         port: 22
         script: |
           cd $HOME/DeVouch-BE

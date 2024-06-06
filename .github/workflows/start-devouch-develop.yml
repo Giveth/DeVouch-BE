@@ -1,15 +1,15 @@
-name: auto-deploy-develop
+name: start-devouch-develop
+
 on:
-  push:
-    branches:
-      - develop
+  workflow_dispatch:
+
 jobs:
 
-  deploy:
-    name: Deploy
+  start:
+    name: Start Devouch
     runs-on: ubuntu-latest
     steps:
-    - name: Staging Auto-Deploy
+    - name: Start Devouch
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.STAGING_HOST }}
@@ -18,8 +18,4 @@ jobs:
         port: 22
         script: |
           cd $HOME/DeVouch-BE
-          git checkout develop
-          git checkout -- .
-          git pull
-          docker compose stop devouch squid-db
           docker compose up -d --build
