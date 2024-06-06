@@ -70,6 +70,7 @@ export const getProject = async (
         totalFlags: 0,
         totalAttests: 0,
         lastUpdatedTimestamp: new Date(),
+        imported: false,
       })
     );
     project = await ctx.store.findOneBy(Project, { id });

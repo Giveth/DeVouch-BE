@@ -70,6 +70,13 @@ export class Project {
     @Column_("text", {nullable: true})
     image!: string | undefined | null
 
+    /**
+     * project data is imported from a source or not
+     */
+    @Index_()
+    @Column_("bool", {nullable: false})
+    imported!: boolean
+
     @Column_("timestamp with time zone", {nullable: false})
     lastUpdatedTimestamp!: Date
 
