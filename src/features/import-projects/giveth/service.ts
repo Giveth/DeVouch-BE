@@ -1,6 +1,5 @@
 import { graphQLRequest } from "../../../helpers/request";
 import { GIVETH_API_URL } from "./constants";
-import { GivethProjectInfo } from "./type";
 
 export const fetchGivethProjectsBatch = async (limit: number, skip: number) => {
   try {
@@ -26,8 +25,6 @@ export const fetchGivethProjectsBatch = async (limit: number, skip: number) => {
         skip,
       }
     );
-
-    console.log('res', res)
 
     return res.data.allProjects.projects;
   } catch (error: any) {
