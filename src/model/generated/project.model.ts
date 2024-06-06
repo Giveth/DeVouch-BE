@@ -62,7 +62,7 @@ export class Project {
      * Slug of the project
      */
     @Column_("text", {nullable: true})
-    slug!: string | undefined | null
+    url!: string | undefined | null
 
     /**
      * Image of the project

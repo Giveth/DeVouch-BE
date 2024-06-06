@@ -4,7 +4,6 @@ type ProjectAttestation @entity {
   recipient: String!
   vouch: Boolean!
   txHash: String!
-  revoked: Boolean!
   attestorOrganisation: AttestorOrganisation!
   project: Project!
   attestTimestamp: DateTime!
@@ -18,7 +17,6 @@ type AttestorOrganisation @entity {
   organisation: Organisation!
   "Timestamp at which the relationship was created"
   attestTimestamp: DateTime!
-  revoked: Boolean!
 }
 
 type Attestor @entity {
@@ -60,7 +58,7 @@ type Project @entity {
   "Total attests"
   totalAttests: Int!
   "Slug of the project"
-  slug: String
+  url: String
   "Image of the project"
   image: String
   "project data is imported from a source or not"

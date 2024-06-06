@@ -39,7 +39,6 @@ export const handleAuthorize = async (
     id: key,
     attestor,
     organisation,
-    revoked: false,
     attestTimestamp: new Date(log.block.timestamp),
   });
 
@@ -66,7 +65,6 @@ export const handleAuthorizeRevoke = async (
     return;
   }
 
-  attestation.revoked = true;
-  await ctx.store.upsert(attestation);
+  await ctx.store.remove(attestation);
   ctx.log.debug(`Revoked authorize attestation ${attestation}`);
 };

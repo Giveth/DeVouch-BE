@@ -27,7 +27,4 @@ export class AttestorOrganisation {
      */
     @Column_("timestamp with time zone", {nullable: false})
     attestTimestamp!: Date
-
-    @Column_("bool", {nullable: false})
-    revoked!: boolean
 }
