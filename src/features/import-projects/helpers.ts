@@ -47,6 +47,7 @@ export const updateOrCreateProject = async (
         image: project[imageField],
         slug: project[slugField],
         lastUpdatedTimestamp: new Date(),
+        imported: true,
       });
 
       await dataSource
@@ -73,6 +74,7 @@ export const updateOrCreateProject = async (
       totalFlags: 0,
       totalAttests: 0,
       lastUpdatedTimestamp: new Date(),
+      imported: true,
     });
 
     await dataSource

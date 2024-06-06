@@ -63,6 +63,8 @@ type Project @entity {
   slug: String
   "Image of the project"
   image: String
+  "project data is imported from a source or not"
+  imported: Boolean! @index
   lastUpdatedTimestamp: DateTime!
   attests: [ProjectAttestation!]! @derivedFrom(field: "project")
   attestedOrganisations: [OrganisationProject!]! @derivedFrom(field: "project")
