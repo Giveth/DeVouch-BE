@@ -23,9 +23,6 @@ export class ProjectAttestation {
     @Column_("text", {nullable: false})
     txHash!: string
 
-    @Column_("bool", {nullable: false})
-    revoked!: boolean
-
     @Index_()
     @ManyToOne_(() => AttestorOrganisation, {nullable: true})
     attestorOrganisation!: AttestorOrganisation

@@ -47,13 +47,6 @@ export const handleProjectAttestation = async (
     return;
   }
 
-  if (attestorOrganisation.revoked) {
-    ctx.log.debug(
-      `Attestor ${issuer} authorization attestation ${refUID} is revoked from organisation ${attestorOrganisation.organisation.name}`
-    );
-    return;
-  }
-
   const { success, data: projectVerificationAttestation } =
     parseAttestationData(decodedData);
 
@@ -93,7 +86,6 @@ export const handleProjectAttestation = async (
     attestorOrganisation,
     comment,
     attestTimestamp: new Date(log.block.timestamp),
-    revoked: false,
     recipient,
   });
 
@@ -124,8 +116,7 @@ export const handleProjectAttestationRevoke = async (
     return;
   }
 
-  attestation.revoked = true;
-  await ctx.store.upsert(attestation);
+  await ctx.store.remove(attestation);
   ctx.log.debug(`Revoked project attestation ${JSON.stringify(attestation)}`);
 
   await updateProjectAttestationCounts(ctx, attestation.project);

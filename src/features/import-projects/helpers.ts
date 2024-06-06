@@ -36,7 +36,7 @@ export const updateOrCreateProject = async (
     const isUpdated =
       existingProject.title !== project[titleField] ||
       existingProject.description !== project[descriptionField] ||
-      existingProject.slug !== project[slugField] ||
+      existingProject.url !== project[slugField] ||
       existingProject.image !== project[imageField];
 
     if (isUpdated) {
@@ -45,7 +45,7 @@ export const updateOrCreateProject = async (
         title: project[titleField],
         description: project[descriptionField],
         image: project[imageField],
-        slug: project[slugField],
+        url: project[slugField],
         lastUpdatedTimestamp: new Date(),
         imported: true,
       });
@@ -67,7 +67,7 @@ export const updateOrCreateProject = async (
       title: project[titleField],
       description: project[descriptionField],
       image: project[imageField],
-      slug: project[slugField],
+      url: project[slugField],
       projectId: projectId,
       source: source,
       totalVouches: 0,

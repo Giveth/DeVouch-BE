@@ -30,7 +30,7 @@ export const processProjectsBatch = async (
       id: project.id,
       title: project.name || project.metadata?.title,
       description: project.metadata?.description,
-      slug: generateGitcoinSlug(project),
+      url: generateGitcoinSlug(project),
       image: project.metadata?.bannerImg
         ? convertIpfsHashToHttps(project.metadata?.bannerImg)
         : "",
