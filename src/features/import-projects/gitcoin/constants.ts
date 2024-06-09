@@ -13,4 +13,5 @@ export const gitcoinSourceConfig: SourceConfig = {
   descriptionField: "description",
   imageField: "image",
   urlField: "url",
+  descriptionHtmlField: "descriptionHtml",
 };
