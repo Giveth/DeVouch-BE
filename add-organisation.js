@@ -8,7 +8,7 @@ const AUTHORIZED_ATTESTOR = "0x843829986e895facd330486a61Ebee9E1f1adB1a";
 const COLOR = "#00433b";
 // staging: eth-sepolia
 // production: optimism-mainnet
-const network = "optimism-mainnet";
+const network = "eth-sepolia";
 
 function main() {
   createOrganisationAddMigration(
