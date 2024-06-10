@@ -11,6 +11,7 @@ export const updateOrCreateProject = async (
     idField,
     titleField,
     descriptionField,
+    descriptionHtmlField,
     urlField,
     imageField,
   } = sourConfig;
@@ -32,20 +33,28 @@ export const updateOrCreateProject = async (
     .where("project.id = :id", { id })
     .getOne();
 
+  const title = project[titleField];
+  const description = project[descriptionField];
+  const url = project[urlField];
+  const image = project[imageField];
+  const descriptionHtml = descriptionHtmlField && project[descriptionHtmlField];
+
   if (existingProject) {
     const isUpdated =
-      existingProject.title !== project[titleField] ||
-      existingProject.description !== project[descriptionField] ||
-      existingProject.url !== project[urlField] ||
-      existingProject.image !== project[imageField];
+      existingProject.title !== title ||
+      existingProject.description !== description ||
+      existingProject.url !== url ||
+      existingProject.image !== image ||
+      existingProject.descriptionHtml !== descriptionHtml;
 
     if (isUpdated) {
       const updatedProject = new Project({
         ...existingProject,
-        title: project[titleField],
-        description: project[descriptionField],
-        image: project[imageField],
-        url: project[urlField],
+        title,
+        description,
+        image,
+        url,
+        descriptionHtml,
         lastUpdatedTimestamp: new Date(),
         imported: true,
       });
@@ -64,12 +73,13 @@ export const updateOrCreateProject = async (
   } else {
     const newProject = new Project({
       id,
-      title: project[titleField],
-      description: project[descriptionField],
-      image: project[imageField],
-      url: project[urlField],
-      projectId: projectId,
-      source: source,
+      title,
+      description,
+      image,
+      url,
+      descriptionHtml,
+      projectId,
+      source,
       totalVouches: 0,
       totalFlags: 0,
       totalAttests: 0,
