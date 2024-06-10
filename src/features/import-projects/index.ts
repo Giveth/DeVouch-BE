@@ -22,6 +22,7 @@ export const importProjects = async () => {
       scheduled: true,
       timezone: "UTC",
     });
+    task();
   } catch (error) {
     console.log("Error on scheduling importing project:", error);
   }
