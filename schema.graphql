@@ -51,6 +51,10 @@ type Project @entity {
   title: String
   "Description of the project"
   description: String
+  "Html format of description"
+  descriptionHtml: String
+  "Description summary in text"
+  descriptionSummary: String
   "Total attests with value True"
   totalVouches: Int!
   "Total attests with value False"

@@ -3,6 +3,7 @@ interface SourceConfig {
   idField: string;
   titleField: string;
   descriptionField: string;
+  descriptionHtmlField?: string;
   urlField: string;
   imageField: string;
 }

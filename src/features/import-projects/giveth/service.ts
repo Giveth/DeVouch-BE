@@ -16,7 +16,7 @@ export const fetchGivethProjectsBatch = async (limit: number, skip: number) => {
             title
             image
             slug
-            descriptionSummary
+            description
           }
         }
       }`,
