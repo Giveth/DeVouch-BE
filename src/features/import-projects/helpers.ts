@@ -1,6 +1,8 @@
 import { type DataSource } from "typeorm";
 import { Project } from "../../model";
 import { getDataSource } from "../../helpers/db";
+import { DESCRIPTION_SUMMARY_LENGTH } from "../../constants";
+import { convert } from "html-to-text";
 
 export const updateOrCreateProject = async (
   project: any,
@@ -45,7 +47,12 @@ export const updateOrCreateProject = async (
       existingProject.description !== description ||
       existingProject.url !== url ||
       existingProject.image !== image ||
-      existingProject.descriptionHtml !== descriptionHtml;
+      existingProject.descriptionHtml !== descriptionHtml ||
+      (!existingProject.descriptionSummary && description);
+
+    const descriptionSummary = getHtmlTextSummary(
+      descriptionHtml || description
+    );
 
     if (isUpdated) {
       const updatedProject = new Project({
@@ -55,6 +62,7 @@ export const updateOrCreateProject = async (
         image,
         url,
         descriptionHtml,
+        descriptionSummary,
         lastUpdatedTimestamp: new Date(),
         imported: true,
       });
@@ -71,6 +79,9 @@ export const updateOrCreateProject = async (
       );
     }
   } else {
+    const descriptionSummary = getHtmlTextSummary(
+      descriptionHtml || description
+    );
     const newProject = new Project({
       id,
       title,
@@ -78,6 +89,7 @@ export const updateOrCreateProject = async (
       image,
       url,
       descriptionHtml,
+      descriptionSummary,
       projectId,
       source,
       totalVouches: 0,
@@ -97,5 +109,29 @@ export const updateOrCreateProject = async (
     console.log(
       `[${new Date().toISOString()}] - INFO: Project Created. Project ID: ${id}`
     );
+  }
+};
+
+const getHtmlTextSummary = (
+  html: string = "",
+  lengthLimit: number = DESCRIPTION_SUMMARY_LENGTH
+): string => {
+  const text = convert(html, {
+    selectors: [
+      { selector: "a", options: { ignoreHref: true } },
+      { selector: "img", format: "skip" },
+    ],
+  })
+    .replace(/^\n+/, "") // Remove new lines from the beginning
+    .replace(/\n{2,}/g, "\n") // Replace multiple \n with single one
+    .replace(/\n$/, ""); // Remove new line from the end
+
+  switch (true) {
+    case text.length <= lengthLimit:
+      return text;
+    case lengthLimit < 3:
+      return ".".repeat(Math.max(0, lengthLimit));
+    default:
+      return text.slice(0, lengthLimit - 3) + "...";
   }
 };
