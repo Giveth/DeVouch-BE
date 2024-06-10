@@ -7,7 +7,7 @@ export const givethSourceConfig: SourceConfig = {
   source: "giveth",
   idField: "id",
   titleField: "title",
-  descriptionField: "descriptionSummary",
+  descriptionField: "description",
   urlField: "url",
   imageField: "image",
 };

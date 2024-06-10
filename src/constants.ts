@@ -29,3 +29,7 @@ export const START_BLOCK = Number.parseInt(
 
 export const IMPORT_PROJECT_CRON_SCHEDULE =
   process.env.IMPORT_PROJECT_CRON_SCHEDULE || "0 0 * * *"; // UTC
+
+export const DESCRIPTION_SUMMARY_LENGTH = Number(
+  process.env.DESCRIPTION_SUMMARY_LENGTH || 300
+);
