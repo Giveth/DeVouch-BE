@@ -1,7 +1,7 @@
 export type GivethProjectInfo = {
   id: string;
   title: string;
-  descriptionSummary: string;
+  description: string;
   slug: string;
   image: string;
 };

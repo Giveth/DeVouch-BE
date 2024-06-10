@@ -47,6 +47,12 @@ export class Project {
     descriptionHtml!: string | undefined | null
 
     /**
+     * Description summary in text
+     */
+    @Column_("text", {nullable: true})
+    descriptionSummary!: string | undefined | null
+
+    /**
      * Total attests with value True
      */
     @Column_("int4", {nullable: false})
