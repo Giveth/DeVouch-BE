@@ -1,0 +1,13 @@
+{
+  "$schema": "./org-config.schema.json",
+
+  "name": "Giveth Verifier",
+  "schemaId": "0xf63f2a7159ee674aa6fce42196a8bb0605eafcf20c19e91a7eafba8d39fa0404",
+  "authorizedAttestor": "0x93E79499b00a2fdAAC38e6005B0ad8E88b177346",
+
+  "network": "optimism-mainnet",
+
+  // Optional
+  "color": "#FFFFFF",
+  "startBlock": 999999999999,
+}

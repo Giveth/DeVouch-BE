@@ -12,5 +12,5 @@
 # Backup file
 .env.backup
 
-# Exclude add-organisation updates on pushes
-add-organisation.js
+# Rogranisation config
+org-config.jsonc

@@ -3,6 +3,7 @@ import { Project } from "../../model";
 import { getDataSource } from "../../helpers/db";
 import { DESCRIPTION_SUMMARY_LENGTH } from "../../constants";
 import { convert } from "html-to-text";
+import { SourceConfig } from "./types";
 
 export const updateOrCreateProject = async (
   project: any,
