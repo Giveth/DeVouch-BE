@@ -1,4 +1,4 @@
-interface SourceConfig {
+export interface SourceConfig {
   source: string;
   idField: string;
   titleField: string;

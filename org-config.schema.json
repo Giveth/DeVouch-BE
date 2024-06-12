@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Organization Configuration",
+  "description": "Schema for the organization configuration file.",
+  "type": "object",
+
+  "properties": {
+    "$schema": {
+      "description": "The schema version.",
+      "type": "string"
+    },
+    "name": {
+      "description": "The name of the organization.",
+      "type": "string"
+    },
+    "schemaId": {
+      "description": "The UID for the attestation schema.",
+      "type": "string",
+      "pattern": "^0x[A-Fa-f0-9]{64}$"
+    },
+    "authorizedAttestor": {
+      "description": "The address of the authorized attestor.",
+      "type": "string",
+      "pattern": "^0x[A-Fa-f0-9]{40}$"
+    },
+
+    "network": {
+      "description": "The network for the organization.",
+      "type": "string",
+      "enum": ["eth-sepolia", "optimism-mainnet"]
+    },
+
+    "color": {
+      "description": "The organisaiton color in UI.",
+      "type": "string",
+      "pattern": "^#[A-Fa-f0-9]{6}$"
+    },
+    "startBlock": {
+      "description": "The block number at which the organization was created.",
+      "type": "integer"
+    }
+  },
+  "required": ["name", "schemaId", "authorizedAttestor", "network"],
+  "additionalProperties": false
+}

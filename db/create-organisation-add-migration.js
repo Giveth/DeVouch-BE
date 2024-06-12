@@ -8,7 +8,8 @@ exports.default = function createOrganisationAddMigration(
   schemaId,
   authorizedAttestor,
   color = null,
-  network = "eth-sepolia"
+  network = "eth-sepolia",
+  startBlock = null
 ) {
   const timestamp = new Date().getTime() + ADD_ORG_MIGRATION_OFFSET;
   const fileName = `${timestamp}-Add${organisationName}.js`;
@@ -25,12 +26,13 @@ exports.default = function createOrganisationAddMigration(
         if (SQUID_NETWORK !== "${network}") return;
         // add organisation with name "${organisationName}" and schema id "${schemaId}"
         await db.query(
-        \`INSERT INTO "organisation" ("id", "name", "issuer", "color") 
+        \`INSERT INTO "organisation" ("id", "name", "issuer", "color", "start_block") 
           VALUES (
             '${schemaId.toLocaleLowerCase()}',
             '${organisationName}',
             '${authorizedAttestor.toLocaleLowerCase()}',
-            ${color ? "'" + color.toLocaleLowerCase() + "'" : null}
+            ${color ? "'" + color.toLocaleLowerCase() + "'" : null},
+            ${startBlock}
           )\`
         );
     }

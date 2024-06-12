@@ -6,7 +6,7 @@ import {
   OrganisationProject,
   Project,
 } from "../../model";
-import { getEntityManger } from "./databaseHelper";
+import { getEntityMangerByContext } from "./databaseHelper";
 import { ProjectStats } from "./types";
 
 export const upsertOrganisatoinProject = async (
@@ -32,7 +32,7 @@ export const updateProjectAttestationCounts = async (
   ctx: DataHandlerContext<Store>,
   project: Project
 ): Promise<void> => {
-  const em = getEntityManger(ctx);
+  const em = getEntityMangerByContext(ctx);
   const projectStats = await getProjectStats(ctx, project);
 
   project.totalVouches = projectStats.pr_total_vouches;
@@ -96,7 +96,7 @@ export const getProjectStats = async (
   ctx: DataHandlerContext<Store>,
   project: Project
 ): Promise<ProjectStats> => {
-  const em = getEntityManger(ctx);
+  const em = getEntityMangerByContext(ctx);
 
   const result = await em.query(
     `

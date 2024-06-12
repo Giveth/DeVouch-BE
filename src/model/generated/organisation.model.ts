@@ -34,6 +34,12 @@ export class Organisation {
     color!: string | undefined | null
 
     /**
+     * The first attestation block number
+     */
+    @Column_("int4", {nullable: true})
+    startBlock!: number | undefined | null
+
+    /**
      * Organization Attestors
      */
     @OneToMany_(() => AttestorOrganisation, e => e.organisation)
