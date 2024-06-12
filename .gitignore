@@ -12,5 +12,5 @@
 # Backup file
 .env.backup
 
-# Rogranisation config
+# Ogranisation config
 org-config.jsonc
