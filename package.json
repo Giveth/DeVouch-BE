@@ -9,7 +9,8 @@
     "test": "npm run test:run-fresh-db; dotenvx run --env-file=.env.test -- jest --runInBand",
     "clear:generate:migration:run:locally": "sqd codegen ; docker compose -f docker-compose-potgres.yml down -v;docker compose -f docker-compose-potgres.yml up -d;sqd migration:generate; sqd run",
     "clear:run:locally": "sqd build ; docker compose -f docker-compose-potgres.yml down -v;docker compose -f docker-compose-potgres.yml up -d; sqd run",
-    "run:locally": "docker compose -f docker-compose-potgres.yml up -d; sqd build; sqd run"
+    "run:locally": "docker compose -f docker-compose-potgres.yml up -d; sqd build; sqd run",
+    "add-organization": "node add-organisation.js"
   },
   "dependencies": {
     "@ethereum-attestation-service/eas-sdk": "^1.5.0",
@@ -21,6 +22,7 @@
     "dotenv": "^16.4.4",
     "ethers": "^6.12.1",
     "html-to-text": "^9.0.5",
+    "jsonc-parser": "^3.2.1",
     "node-cron": "^3.0.3",
     "pg": "^8.11.5",
     "showdown": "^2.1.0",

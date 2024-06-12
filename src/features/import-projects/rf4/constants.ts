@@ -1,3 +1,5 @@
+import { SourceConfig } from "../types";
+
 export const RF4_API_URL =
   process.env.RF4_API_URL || "https://round4-api-eas.retrolist.app/projects";
 

@@ -35,6 +35,8 @@ type Organisation @entity {
   issuer: String!
   "Color of the organization"
   color: String
+  "The first attestation block number"
+  startBlock: Int
   "Organization Attestors"
   attestors: [AttestorOrganisation!]! @derivedFrom(field: "organisation")
   attestedProjects: [OrganisationProject!]! @derivedFrom(field: "organisation")
