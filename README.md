@@ -11,7 +11,7 @@ Devouch is a decentralized application that allows users to attest to projects c
 
 ```bash
 # 0. Copy the org-config.template.json to org-config.json
-cp org-config.template.json org-config.json
+cp org-config.template.jsonc org-config.jsonc
 
 # 1. Fill the config with your organisation data
 # 2. Run the script to add your organisation data to migrations
