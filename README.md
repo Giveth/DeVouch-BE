@@ -2,7 +2,7 @@
 
 # Introduction
 
-Devouch is a decentralized application that allows users to attest to projects credibility by their vouches or flags. The backend is built on Subsquid and uses a Postgres database.
+Devouch is a decentralized application that allows users to attest to project's credibility by their vouches or flags. The backend is built on Subsquid and uses a Postgres database.
 
 ## Add new organisation
 
