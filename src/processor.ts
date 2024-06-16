@@ -68,7 +68,7 @@ export class Processor {
           },
         })
         .setBlockRange({
-          from: START_BLOCK,
+          from: start_block,
         })
         .addLog({
           address: [EAS_CONTRACT_ADDRESS],
