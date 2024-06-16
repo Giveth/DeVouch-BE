@@ -6,16 +6,10 @@ import Showdown from "showdown";
 const generateGitcoinUrl = (project: GitcoinProjectInfo) => {
   const application = project.applications[0];
 
-  if (
-    !application ||
-    !application?.roundId ||
-    !application?.chainId ||
-    !application?.id
-  )
-    return "";
+  if (!application || !application?.id) return "";
 
-  const { chainId, roundId, id } = application;
-  return `#/round/${chainId}/${roundId}/${id}`;
+  const { id } = application;
+  return `#/projects/${id}`;
 };
 
 const convertIpfsHashToHttps = (hash: string) => {
