@@ -2,10 +2,7 @@
 
 # Introduction
 
-Devouch is a decentralized application that allows users to attest to projects credibility by their vouches or flags. The backend is built on Subsquid and uses a Postgres database.
-
-# Getting Started
-
+Devouch is a decentralized application that allows users to attest to project's credibility by their vouches or flags. The backend is built on Subsquid and uses a Postgres database.
 
 ## Add new organisation
 
@@ -18,3 +15,7 @@ cp org-config.template.jsonc org-config.jsonc
 npm run add-organization
 ```
 Then create a PR to the main branch to be reviewed and merged.
+
+## Further Documentation
+
+More information can be found on the [Giveth docs website](https://docs.giveth.io/devouch).
