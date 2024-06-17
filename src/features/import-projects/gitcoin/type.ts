@@ -1,14 +1,7 @@
 export type GitcoinProjectInfo = {
   id: string;
   name: string;
-  applications: GitcoinApplication[];
   metadata: GitcoinMetadata;
-};
-
-type GitcoinApplication = {
-  roundId: string;
-  chainId: number;
-  id: string;
 };
 
 type GitcoinMetadata = {
