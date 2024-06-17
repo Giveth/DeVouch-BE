@@ -4,12 +4,8 @@ import { IPFS_GATEWAY, gitcoinSourceConfig } from "./constants";
 import Showdown from "showdown";
 
 const generateGitcoinUrl = (project: GitcoinProjectInfo) => {
-  const application = project.applications[0];
-
-  if (!application || !application?.id) return "";
-
-  const { id } = application;
-  return `#/projects/${id}`;
+  if (!project.id) return "";
+  return `#/projects/${project.id}`;
 };
 
 const convertIpfsHashToHttps = (hash: string) => {
