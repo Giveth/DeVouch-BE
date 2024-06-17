@@ -1,6 +1,5 @@
 import { graphQLRequest } from "../../../helpers/request";
 import { GITCOIN_API_URL } from "./constants";
-import { GitcoinProjectInfo } from "./type";
 
 export const fetchGitcoinProjectsBatch = async (
   first: number,
@@ -24,11 +23,6 @@ export const fetchGitcoinProjectsBatch = async (
         ) {
           id
           name
-          applications {
-            roundId
-            chainId
-            id
-          }
           metadata
         }
       }
