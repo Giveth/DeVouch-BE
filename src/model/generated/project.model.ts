@@ -83,6 +83,12 @@ export class Project {
     image!: string | undefined | null
 
     /**
+     * Project status at the source. e.g. Keeped, Removed, Missing in rf4
+     */
+    @Column_("text", {nullable: true})
+    sourceStatus!: string | undefined | null
+
+    /**
      * project data is imported from a source or not
      */
     @Index_()

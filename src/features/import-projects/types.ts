@@ -6,4 +6,5 @@ export interface SourceConfig {
   descriptionHtmlField?: string;
   urlField: string;
   imageField: string;
+  sourceStatusField?: string;
 }
