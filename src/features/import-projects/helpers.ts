@@ -17,6 +17,7 @@ export const updateOrCreateProject = async (
     descriptionHtmlField,
     urlField,
     imageField,
+    sourceStatusField,
   } = sourConfig;
 
   const projectId = project[idField].toLowerCase();
@@ -41,6 +42,7 @@ export const updateOrCreateProject = async (
   const url = project[urlField];
   const image = project[imageField];
   const descriptionHtml = descriptionHtmlField && project[descriptionHtmlField];
+  const sourceStatus = sourceStatusField && project[sourceStatusField];
 
   if (existingProject) {
     const isUpdated =
@@ -48,6 +50,7 @@ export const updateOrCreateProject = async (
       existingProject.description !== description ||
       existingProject.url !== url ||
       existingProject.image !== image ||
+      existingProject.sourceStatus !== sourceStatus ||
       existingProject.descriptionHtml !== descriptionHtml ||
       (!existingProject.descriptionSummary && description);
 
@@ -64,6 +67,7 @@ export const updateOrCreateProject = async (
         url,
         descriptionHtml,
         descriptionSummary,
+        sourceStatus,
         lastUpdatedTimestamp: new Date(),
         imported: true,
       });
@@ -93,6 +97,7 @@ export const updateOrCreateProject = async (
       descriptionSummary,
       projectId,
       source,
+      sourceStatus,
       totalVouches: 0,
       totalFlags: 0,
       totalAttests: 0,
