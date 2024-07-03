@@ -8,10 +8,12 @@ export const fetchAndProcessRf4Projects = async () => {
     const data = await fetchRf4Projects();
     if (!data) return;
     for (const project of data) {
+      if (project.prelimResult !== "Keep") continue;
+
       const processedProject = {
         ...project,
         url: generateRf4Url(project),
-      }
+      };
       await updateOrCreateProject(processedProject, rf4SourceConfig);
     }
   } catch (error: any) {
