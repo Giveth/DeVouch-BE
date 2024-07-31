@@ -1,4 +1,5 @@
 import { assertNotNull } from "@subsquid/evm-processor";
+import { map } from "zod";
 
 const SQUID_NETWORK = process.env.SQUID_NETWORK || "eth-sepolia";
 
@@ -15,9 +16,12 @@ export const SCHEMA_CONTRACT_ADDRESS = assertNotNull(
     : "0x0a7E2Ff54e76B8E6659aedc9103FB21c038050D0"
 );
 
-export const PROJECT_VERIFY_SCHEMA = assertNotNull(
-  process.env.PROJECT_VERIFY_ATTESTATION_SCHEMA
-).toLocaleLowerCase();
+export const PROJECT_VERIFY_SCHEMA = new Set(
+  assertNotNull(process.env.PROJECT_VERIFY_ATTESTATION_SCHEMA)
+    .toLocaleLowerCase()
+    .split(",")
+    .map((s) => s.trim())
+);
 
 export const LOOKUP_ARCHIVE = IS_PRODUCTION
   ? "https://v2.archive.subsquid.io/network/optimism-mainnet"
