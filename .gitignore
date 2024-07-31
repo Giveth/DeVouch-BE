@@ -10,7 +10,7 @@
 /.env
 
 # Backup file
-.env.backup
+.env.*
 
 # Ogranisation config
 org-config.jsonc

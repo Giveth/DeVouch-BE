@@ -11,12 +11,9 @@ export async function processRevokeLog(
 ): Promise<void> {
   const { uid, schema: schemaUid } = EASContract.events.Revoked.decode(log);
 
-  switch (schemaUid.toLocaleLowerCase()) {
-    case PROJECT_VERIFY_SCHEMA:
-      await handleProjectAttestationRevoke(ctx, uid);
-      break;
-
-    default:
-      await handleAuthorizeRevoke(ctx, uid);
+  if (PROJECT_VERIFY_SCHEMA.has(schemaUid.toLocaleLowerCase())) {
+    await handleProjectAttestationRevoke(ctx, uid);
+    return;
   }
+  await handleAuthorizeRevoke(ctx, uid);
 }
