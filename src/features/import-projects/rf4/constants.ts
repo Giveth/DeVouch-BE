@@ -10,5 +10,4 @@ export const rf4SourceConfig: SourceConfig = {
   descriptionField: "description",
   imageField: "bannerImageUrl",
   urlField: "url",
-  sourceStatusField: "prelimResult",
 };
