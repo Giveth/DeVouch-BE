@@ -50,7 +50,7 @@ export const updateOrCreateProject = async (
       existingProject.description !== description ||
       existingProject.url !== url ||
       existingProject.image !== image ||
-      (rfRound && !existingProject.rfRounds?.some((rfr) => (rfr = rfRound))) ||
+      (rfRound && !existingProject.rfRounds?.some((rfr) => rfr === rfRound)) ||
       existingProject.descriptionHtml !== descriptionHtml ||
       (!existingProject.descriptionSummary && description);
 
