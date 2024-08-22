@@ -3,7 +3,6 @@ import { saveBatchProjects } from "./helpers";
 import { RfApiResponse, RfProjectInfo } from "./type";
 
 export const fetchRFProjectsByRound = async (round: number) => {
-  let allProjects: RfProjectInfo[] = [];
   let offset = 0;
   const limit = 10;
   let hasNext = true;
@@ -22,23 +21,22 @@ export const fetchRFProjectsByRound = async (round: number) => {
       );
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(
+          `HTTP error! status: ${response.status} for round: ${round} at offset: ${offset}`
+        );
       }
 
       const res: RfApiResponse = await response.json();
-
-      // allProjects = allProjects.concat(res.data);
 
       await saveBatchProjects(res.data, round);
 
       hasNext = res.meta.has_next;
       offset = res.meta.next_offset;
     }
-
-    console.log(allProjects);
   } catch (error) {
-    console.error("Error fetching projects:", error);
+    console.error(
+      `Error fetching projects for round: ${round} at offset: ${offset}`,
+      error
+    );
   }
-
-  return allProjects;
 };
