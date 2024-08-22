@@ -2,14 +2,14 @@ import { updateOrCreateProject } from "../helpers";
 import { rfSourceConfig } from "./constants";
 import { RfProjectInfo } from "./type";
 
-export const generateRf4Url = (project: RfProjectInfo) => {
+export const generateRfUrl = (project: RfProjectInfo) => {
   return `/project/${project.id}`;
 };
 
 const processProject = (project: RfProjectInfo, round: number) => {
   const projectData = {
     ...project,
-    url: generateRf4Url(project),
+    url: generateRfUrl(project),
     rfRound: round,
   };
   return projectData;
