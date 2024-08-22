@@ -4,13 +4,15 @@ import { fetchAndProcessGivethProjects } from "./giveth/index";
 import { fetchAndProcessRpgf3Projects } from "./rpgf";
 import { fetchAndProcessGitcoinProjects } from "./gitcoin";
 import { fetchAndProcessRf4Projects } from "./rf4";
+import { fetchRFProjectsByRound } from "./rf";
 
 export const task = async () => {
   console.log("Importing Projects", new Date());
   fetchAndProcessGivethProjects();
-  // fetchAndProcessRpgf3Projects();
   fetchAndProcessGitcoinProjects();
-  fetchAndProcessRf4Projects();
+  // fetchAndProcessRpgf3Projects();
+  await fetchRFProjectsByRound(4);
+  await fetchRFProjectsByRound(5);
 };
 
 export const importProjects = async () => {

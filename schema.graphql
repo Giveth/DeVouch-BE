@@ -67,13 +67,13 @@ type Project @entity {
   url: String
   "Image of the project"
   image: String
-  "Project status at the source. e.g. Keeped, Removed, Missing in rf4"
-  sourceStatus: String
   "project data is imported from a source or not"
   imported: Boolean! @index
   lastUpdatedTimestamp: DateTime!
   attests: [ProjectAttestation!]! @derivedFrom(field: "project")
   attestedOrganisations: [OrganisationProject!]! @derivedFrom(field: "project")
+  "Rounds in which the project is included"
+  rfRounds: [Int!]
 }
 
 type OrganisationProject @entity {
