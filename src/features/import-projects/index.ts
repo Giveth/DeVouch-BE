@@ -3,7 +3,6 @@ import { IMPORT_PROJECT_CRON_SCHEDULE } from "../../constants";
 import { fetchAndProcessGivethProjects } from "./giveth/index";
 import { fetchAndProcessRpgf3Projects } from "./rpgf";
 import { fetchAndProcessGitcoinProjects } from "./gitcoin";
-import { fetchAndProcessRf4Projects } from "./rf4";
 import { fetchRFProjectsByRound } from "./rf";
 
 export const task = async () => {
