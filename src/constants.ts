@@ -38,4 +38,4 @@ export const DESCRIPTION_SUMMARY_LENGTH = Number(
   process.env.DESCRIPTION_SUMMARY_LENGTH || 300
 );
 
-export const AGORA_API_KEY = assertNotNull(process.env.AGORA_API_KEY);
+export const AGORA_API_KEY = process.env.AGORA_API_KEY;
