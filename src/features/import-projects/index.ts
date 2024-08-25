@@ -7,8 +7,8 @@ import { fetchRFProjectsByRound } from "./rf";
 
 export const task = async () => {
   console.log("Importing Projects", new Date());
-  // await fetchAndProcessGivethProjects();
-  // await fetchAndProcessGitcoinProjects();
+  await fetchAndProcessGivethProjects();
+  await fetchAndProcessGitcoinProjects();
   // fetchAndProcessRpgf3Projects();
   await fetchRFProjectsByRound(4);
   await fetchRFProjectsByRound(5);
