@@ -7,6 +7,10 @@ export const fetchRFProjectsByRound = async (round: number) => {
   const limit = 10;
   let hasNext = true;
 
+  console.log(
+    `[${new Date().toISOString()}] - Fetching projects for round: ${round} - process.env.AGORA_API_KEY`
+  );
+
   try {
     while (hasNext) {
       const response = await fetch(
