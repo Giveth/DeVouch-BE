@@ -19,6 +19,9 @@ export const fetchRFProjectsByRound = async (round: number) => {
           },
         }
       );
+      console.log(
+        `[${new Date().toISOString()}] - Fetching projects for round: ${round} at offset: ${offset} - ${response.status} - ${response.ok}`
+      );
 
       if (!response.ok) {
         throw new Error(
