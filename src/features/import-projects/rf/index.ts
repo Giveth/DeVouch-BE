@@ -8,7 +8,7 @@ export const fetchRFProjectsByRound = async (round: number) => {
   let hasNext = true;
 
   console.log(
-    `[${new Date().toISOString()}] - Fetching projects for round: ${round} - process.env.AGORA_API_KEY`
+    `[${new Date().toISOString()}] - Fetching projects for round: ${round} - ${process.env.AGORA_API_KEY}`
   );
 
   try {
