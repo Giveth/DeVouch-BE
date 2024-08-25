@@ -1,3 +1,4 @@
+import { AGORA_API_KEY } from "../../../constants";
 import { RF_API_URL } from "./constants";
 import { saveBatchProjects } from "./helpers";
 import { RfApiResponse, RfProjectInfo } from "./type";
@@ -8,8 +9,13 @@ export const fetchRFProjectsByRound = async (round: number) => {
   let hasNext = true;
 
   console.log(
-    `[${new Date().toISOString()}] - Fetching projects for round: ${round} - ${process.env.AGORA_API_KEY}`
+    `[${new Date().toISOString()}] - Fetching projects for round: ${round}`
   );
+
+  if (!AGORA_API_KEY) {
+    console.error("AGORA_API_KEY is not set");
+    return;
+  }
 
   try {
     while (hasNext) {
@@ -19,7 +25,7 @@ export const fetchRFProjectsByRound = async (round: number) => {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${process.env.AGORA_API_KEY}`,
+            Authorization: `Bearer ${AGORA_API_KEY}`,
           },
         }
       );
