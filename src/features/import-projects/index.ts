@@ -4,6 +4,7 @@ import { fetchAndProcessGivethProjects } from "./giveth/index";
 import { fetchAndProcessRpgf3Projects } from "./rpgf";
 import { fetchAndProcessGitcoinProjects } from "./gitcoin";
 import { fetchRFProjectsByRound } from "./rf";
+import { fetchAndProcessRlProjects } from "./retroList";
 
 export const task = async () => {
   console.log("Importing Projects", new Date());
@@ -11,7 +12,8 @@ export const task = async () => {
   await fetchAndProcessGitcoinProjects();
   // fetchAndProcessRpgf3Projects();
   await fetchRFProjectsByRound(4);
-  await fetchRFProjectsByRound(5);
+  // await fetchRFProjectsByRound(5); //TODO: It will fill on 20th Sep
+  await fetchAndProcessRlProjects(5);
 };
 
 export const importProjects = async () => {
