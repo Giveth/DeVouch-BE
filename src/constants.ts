@@ -1,5 +1,4 @@
 import { assertNotNull } from "@subsquid/evm-processor";
-import { map } from "zod";
 
 const SQUID_NETWORK = process.env.SQUID_NETWORK || "eth-sepolia";
 
