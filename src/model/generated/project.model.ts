@@ -83,12 +83,6 @@ export class Project {
     image!: string | undefined | null
 
     /**
-     * Project status at the source. e.g. Keeped, Removed, Missing in rf4
-     */
-    @Column_("text", {nullable: true})
-    sourceStatus!: string | undefined | null
-
-    /**
      * project data is imported from a source or not
      */
     @Index_()
@@ -103,4 +97,10 @@ export class Project {
 
     @OneToMany_(() => OrganisationProject, e => e.project)
     attestedOrganisations!: OrganisationProject[]
+
+    /**
+     * Rounds in which the project is included
+     */
+    @Column_("int4", {array: true, nullable: true})
+    rfRounds!: (number)[] | undefined | null
 }

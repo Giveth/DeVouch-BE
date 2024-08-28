@@ -1,4 +1,6 @@
-export type Rf4ProjectInfo = {
+export type RoundNumber = 4 | 5;
+
+export type RlProjectInfo = {
   id: string;
   name: string;
   displayName: string;

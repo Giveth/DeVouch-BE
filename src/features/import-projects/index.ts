@@ -3,14 +3,17 @@ import { IMPORT_PROJECT_CRON_SCHEDULE } from "../../constants";
 import { fetchAndProcessGivethProjects } from "./giveth/index";
 import { fetchAndProcessRpgf3Projects } from "./rpgf";
 import { fetchAndProcessGitcoinProjects } from "./gitcoin";
-import { fetchAndProcessRf4Projects } from "./rf4";
+import { fetchRFProjectsByRound } from "./rf";
+import { fetchAndProcessRlProjects } from "./retroList";
 
 export const task = async () => {
   console.log("Importing Projects", new Date());
-  fetchAndProcessGivethProjects();
+  await fetchAndProcessGivethProjects();
+  await fetchAndProcessGitcoinProjects();
   // fetchAndProcessRpgf3Projects();
-  fetchAndProcessGitcoinProjects();
-  fetchAndProcessRf4Projects();
+  await fetchRFProjectsByRound(4);
+  // await fetchRFProjectsByRound(5); //TODO: It will fill on 20th Sep
+  await fetchAndProcessRlProjects(5);
 };
 
 export const importProjects = async () => {

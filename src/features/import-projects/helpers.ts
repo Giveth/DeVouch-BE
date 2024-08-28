@@ -17,7 +17,7 @@ export const updateOrCreateProject = async (
     descriptionHtmlField,
     urlField,
     imageField,
-    sourceStatusField,
+    rfRoundField,
   } = sourConfig;
 
   const projectId = project[idField].toLowerCase();
@@ -42,7 +42,7 @@ export const updateOrCreateProject = async (
   const url = project[urlField];
   const image = project[imageField];
   const descriptionHtml = descriptionHtmlField && project[descriptionHtmlField];
-  const sourceStatus = sourceStatusField && project[sourceStatusField];
+  const rfRound = rfRoundField && project[rfRoundField];
 
   if (existingProject) {
     const isUpdated =
@@ -50,7 +50,7 @@ export const updateOrCreateProject = async (
       existingProject.description !== description ||
       existingProject.url !== url ||
       existingProject.image !== image ||
-      existingProject.sourceStatus !== sourceStatus ||
+      (rfRound && !existingProject.rfRounds?.some((rfr) => rfr === rfRound)) ||
       existingProject.descriptionHtml !== descriptionHtml ||
       (!existingProject.descriptionSummary && description);
 
@@ -59,6 +59,8 @@ export const updateOrCreateProject = async (
     );
 
     if (isUpdated) {
+      const rfRounds = new Set(existingProject.rfRounds || []);
+      rfRound && rfRounds.add(rfRound);
       const updatedProject = new Project({
         ...existingProject,
         title,
@@ -67,8 +69,8 @@ export const updateOrCreateProject = async (
         url,
         descriptionHtml,
         descriptionSummary,
-        sourceStatus,
         lastUpdatedTimestamp: new Date(),
+        rfRounds: Array.from(rfRounds),
         imported: true,
       });
 
@@ -97,7 +99,7 @@ export const updateOrCreateProject = async (
       descriptionSummary,
       projectId,
       source,
-      sourceStatus,
+      rfRounds: rfRound ? [rfRound] : [],
       totalVouches: 0,
       totalFlags: 0,
       totalAttests: 0,

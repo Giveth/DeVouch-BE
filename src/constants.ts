@@ -37,3 +37,5 @@ export const IMPORT_PROJECT_CRON_SCHEDULE =
 export const DESCRIPTION_SUMMARY_LENGTH = Number(
   process.env.DESCRIPTION_SUMMARY_LENGTH || 300
 );
+
+export const AGORA_API_KEY = process.env.AGORA_API_KEY;

@@ -63,11 +63,15 @@ export const handleProjectAttestation = async (
 
   ctx.log.debug(`Processing project attestation with uid: ${uid}`);
 
-  const project = await getProject(
-    ctx,
-    projectVerificationAttestation.projectSource,
-    projectVerificationAttestation.projectId
-  );
+  let projectId = projectVerificationAttestation.projectId;
+  let projectSource = projectVerificationAttestation.projectSource;
+
+  if (projectVerificationAttestation.projectSource === "rf4") {
+    projectId = projectVerificationAttestation.projectId.replace("rf4-", "rf-");
+    projectSource = "rf";
+  }
+
+  const project = await getProject(ctx, projectSource, projectId);
 
   // Delete the previous attestation
   await removeDuplicateProjectAttestations(
