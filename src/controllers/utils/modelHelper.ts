@@ -2,12 +2,14 @@ import { DataHandlerContext } from "@subsquid/evm-processor";
 import { Store } from "@subsquid/typeorm-store";
 import {
   Attestor,
+  AttestorOrganisation,
   Organisation,
   OrganisationProject,
   Project,
 } from "../../model";
 import { getEntityMangerByContext } from "./databaseHelper";
 import { ProjectStats } from "./types";
+import { ZERO_UID } from "../../constants";
 
 export const upsertOrganisatoinProject = async (
   ctx: DataHandlerContext<Store>,
@@ -181,4 +183,53 @@ export const getProjectStats = async (
   );
 
   return ProjectStats.parse(result[0]);
+};
+
+export const getOrCreateAttestorOrganisation = async (
+  ctx: DataHandlerContext<Store>,
+  attestor: Attestor,
+  refUID?: string,
+  attestTimestamp?: Date
+): Promise<AttestorOrganisation | undefined> => {
+  // Check if refUID is valid and not a placeholder for an empty reference
+  if (refUID && refUID !== ZERO_UID) {
+    // Attempt to find existing AttestorOrganisation
+    const attestorOrganisation = await ctx.store.get(AttestorOrganisation, {
+      where: { id: refUID.toLowerCase() },
+      relations: { organisation: true, attestor: true },
+    });
+
+    if (attestorOrganisation) {
+      ctx.log.debug(
+        `Found existing attestorOrganisation: ${attestorOrganisation}`
+      );
+      return attestorOrganisation;
+    }
+  }
+
+  // Attempt to retrieve default organisation
+  let organisation = await ctx.store.get(Organisation, ZERO_UID);
+
+  if (!organisation) {
+    ctx.log.error("No Affiliation organisation not found");
+    return undefined;
+  }
+
+  // Ensure timestamp is set
+  const timestamp = attestTimestamp || new Date();
+
+  // Generate unique key
+  const key = `NO_AFFILIATION${attestor.id}`;
+
+  const newAttestorOrganisation = new AttestorOrganisation({
+    id: key,
+    attestor,
+    organisation,
+    attestTimestamp: timestamp,
+  });
+
+  await ctx.store.upsert(newAttestorOrganisation);
+  ctx.log.debug(`Created new attestorOrganisation: ${newAttestorOrganisation}`);
+
+  return newAttestorOrganisation;
 };
