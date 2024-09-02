@@ -193,33 +193,22 @@ export const getOrCreateAttestorOrganisation = async (
 ): Promise<AttestorOrganisation | undefined> => {
   // Check if refUID is valid and not a placeholder for an empty reference
   if (refUID && refUID !== ZERO_UID) {
-    try {
-      // Attempt to find existing AttestorOrganisation
-      const attestorOrganisation = await ctx.store.get(AttestorOrganisation, {
-        where: { id: refUID.toLowerCase() },
-        relations: { organisation: true, attestor: true },
-      });
+    // Attempt to find existing AttestorOrganisation
+    const attestorOrganisation = await ctx.store.get(AttestorOrganisation, {
+      where: { id: refUID.toLowerCase() },
+      relations: { organisation: true, attestor: true },
+    });
 
-      if (attestorOrganisation) {
-        ctx.log.debug(
-          `Found existing attestorOrganisation: ${attestorOrganisation}`
-        );
-        return attestorOrganisation;
-      }
-    } catch (error) {
-      ctx.log.error(`Error retrieving attestorOrganisation: ${error}`);
-      return undefined;
+    if (attestorOrganisation) {
+      ctx.log.debug(
+        `Found existing attestorOrganisation: ${attestorOrganisation}`
+      );
+      return attestorOrganisation;
     }
   }
 
   // Attempt to retrieve default organisation
-  let organisation;
-  try {
-    organisation = await ctx.store.get(Organisation, ZERO_UID);
-  } catch (error) {
-    ctx.log.error(`Error retrieving No Affiliation organisation: ${error}`);
-    return undefined;
-  }
+  let organisation = await ctx.store.get(Organisation, ZERO_UID);
 
   if (!organisation) {
     ctx.log.error("No Affiliation organisation not found");
@@ -239,15 +228,8 @@ export const getOrCreateAttestorOrganisation = async (
     attestTimestamp: timestamp,
   });
 
-  try {
-    await ctx.store.upsert(newAttestorOrganisation);
-    ctx.log.debug(
-      `Created new attestorOrganisation: ${newAttestorOrganisation}`
-    );
-  } catch (error) {
-    ctx.log.error(`Error upserting attestorOrganisation: ${error}`);
-    return undefined;
-  }
+  await ctx.store.upsert(newAttestorOrganisation);
+  ctx.log.debug(`Created new attestorOrganisation: ${newAttestorOrganisation}`);
 
   return newAttestorOrganisation;
 };
