@@ -38,3 +38,5 @@ export const DESCRIPTION_SUMMARY_LENGTH = Number(
 );
 
 export const AGORA_API_KEY = process.env.AGORA_API_KEY;
+
+export const NO_AFFILIATION_SCHEMA = process.env.NO_AFFILIATION_SCHEMA;
