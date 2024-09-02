@@ -1,7 +1,7 @@
-import { ZeroAddress } from "ethers";
-import {ZERO_BYTES32} from '@ethereum-attestation-service/eas-sdk'
+const ethers = require("ethers");
+const easSdk = require("@ethereum-attestation-service/eas-sdk");
 
-const ZERO_UID = ZERO_BYTES32;
+const ZERO_UID = easSdk.ZERO_BYTES32;
 module.exports = class AddNoAffiliation1735226891776 {
   name = "AddNoAffiliation1735226891776";
 
@@ -12,7 +12,7 @@ module.exports = class AddNoAffiliation1735226891776 {
         VALUES (
           '${ZERO_UID}',
           'No Affiliation',
-          '${ZeroAddress}',
+          '${ethers.ZeroAddress}',
           '#0049b7',
           null
         )`
