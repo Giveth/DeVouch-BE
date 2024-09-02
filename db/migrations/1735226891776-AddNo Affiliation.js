@@ -1,3 +1,7 @@
+import { ZeroAddress } from "ethers";
+import {ZERO_BYTES32} from '@ethereum-attestation-service/eas-sdk'
+
+const ZERO_UID = ZERO_BYTES32;
 module.exports = class AddNoAffiliation1735226891776 {
   name = "AddNoAffiliation1735226891776";
 
@@ -6,9 +10,9 @@ module.exports = class AddNoAffiliation1735226891776 {
     await db.query(
       `INSERT INTO "organisation" ("id", "name", "issuer", "color", "start_block") 
         VALUES (
-          '0x0000000000000000000000000000000000000000000000000000000000000000',
+          '${ZERO_UID}',
           'No Affiliation',
-          '0x0000000000000000000000000000000000000000',
+          '${ZeroAddress}',
           '#0049b7',
           null
         )`
@@ -18,7 +22,7 @@ module.exports = class AddNoAffiliation1735226891776 {
   async down(db) {
     // Remove organisation with name "No Affiliation"
     await db.query(
-      `DELETE FROM "organisation" WHERE "id" = '0x0000000000000000000000000000000000000000000000000000000000000000'`
+      `DELETE FROM "organisation" WHERE "id" = '${ZERO_UID}'`
     );
   }
 };
