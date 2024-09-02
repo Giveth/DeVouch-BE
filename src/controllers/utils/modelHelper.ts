@@ -9,7 +9,7 @@ import {
 } from "../../model";
 import { getEntityMangerByContext } from "./databaseHelper";
 import { ProjectStats } from "./types";
-import { NO_AFFILIATION_SCHEMA, ZERO_UID } from "../../constants";
+import { ZERO_UID } from "../../constants";
 
 export const upsertOrganisatoinProject = async (
   ctx: DataHandlerContext<Store>,
@@ -215,11 +215,7 @@ export const getOrCreateAttestorOrganisation = async (
   // Attempt to retrieve default organisation
   let organisation;
   try {
-    if (!NO_AFFILIATION_SCHEMA) {
-      ctx.log.error("NO_AFFILIATION_SCHEMA not set");
-      return undefined;
-    }
-    organisation = await ctx.store.get(Organisation, NO_AFFILIATION_SCHEMA);
+    organisation = await ctx.store.get(Organisation, ZERO_UID);
   } catch (error) {
     ctx.log.error(`Error retrieving No Affiliation organisation: ${error}`);
     return undefined;
