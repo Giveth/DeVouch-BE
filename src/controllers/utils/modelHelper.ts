@@ -219,7 +219,7 @@ export const getOrCreateAttestorOrganisation = async (
   const timestamp = attestTimestamp || new Date();
 
   // Generate unique key
-  const key = `NO_AFFILIATION${attestor.id}`;
+  const key = `${ZERO_UID}${attestor.id}`;
 
   const newAttestorOrganisation = new AttestorOrganisation({
     id: key,
