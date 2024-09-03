@@ -5,7 +5,7 @@ import {
   getAttestationData,
   removeDuplicateProjectAttestations,
 } from "./utils/easHelper";
-import { AttestorOrganisation, ProjectAttestation } from "../model";
+import { ProjectAttestation } from "../model";
 import {
   getAttestor,
   getOrCreateAttestorOrganisation,
@@ -18,12 +18,10 @@ export const handleProjectAttestation = async (
   ctx: DataHandlerContext<Store>,
   log: Log
 ): Promise<void> => {
-  const {
-    uid,
-    schema: schemaUid,
-    attestor: issuer,
-    recipient,
-  } = EASContract.events.Attested.decode(log);
+  const attestedEvent = EASContract.events.Attested.decode(log);
+
+  const { uid, schema: schemaUid, recipient } = attestedEvent;
+  const issuer = attestedEvent.attestor.toLowerCase();
 
   const { decodedData, refUID } = await getAttestationData(
     ctx,
