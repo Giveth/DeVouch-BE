@@ -1,5 +1,5 @@
+import { ZERO_BYTES32 } from "@ethereum-attestation-service/eas-sdk";
 import { assertNotNull } from "@subsquid/evm-processor";
-import { map } from "zod";
 
 const SQUID_NETWORK = process.env.SQUID_NETWORK || "eth-sepolia";
 
@@ -39,3 +39,5 @@ export const DESCRIPTION_SUMMARY_LENGTH = Number(
 );
 
 export const AGORA_API_KEY = process.env.AGORA_API_KEY;
+
+export const ZERO_UID = ZERO_BYTES32;

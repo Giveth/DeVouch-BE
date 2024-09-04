@@ -5,8 +5,10 @@ import {
   getAttestationData,
   removeDuplicateProjectAttestations,
 } from "./utils/easHelper";
-import { AttestorOrganisation, ProjectAttestation } from "../model";
+import { ProjectAttestation } from "../model";
 import {
+  getAttestor,
+  getOrCreateAttestorOrganisation,
   getProject,
   updateProjectAttestationCounts,
 } from "./utils/modelHelper";
@@ -16,12 +18,10 @@ export const handleProjectAttestation = async (
   ctx: DataHandlerContext<Store>,
   log: Log
 ): Promise<void> => {
-  const {
-    uid,
-    schema: schemaUid,
-    attestor: issuer,
-    recipient,
-  } = EASContract.events.Attested.decode(log);
+  const attestedEvent = EASContract.events.Attested.decode(log);
+
+  const { uid, schema: schemaUid, recipient } = attestedEvent;
+  const issuer = attestedEvent.attestor.toLowerCase();
 
   const { decodedData, refUID } = await getAttestationData(
     ctx,
@@ -30,15 +30,14 @@ export const handleProjectAttestation = async (
     schemaUid
   );
 
-  const attestorOrganisation = await ctx.store.get(AttestorOrganisation, {
-    where: {
-      id: refUID.toLowerCase(),
-    },
-    relations: {
-      organisation: true,
-      attestor: true,
-    },
-  });
+  const attestor = await getAttestor(ctx, issuer);
+
+  const attestorOrganisation = await getOrCreateAttestorOrganisation(
+    ctx,
+    attestor,
+    refUID,
+    new Date(log.block.timestamp)
+  );
 
   if (!attestorOrganisation) {
     ctx.log.debug(
