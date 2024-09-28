@@ -8,10 +8,10 @@ import { fetchAndProcessRlProjects } from "./retroList";
 
 export const task = async () => {
   console.log("Importing Projects", new Date());
-  // await fetchAndProcessGivethProjects();
-  // await fetchAndProcessGitcoinProjects();
+  await fetchAndProcessGivethProjects();
+  await fetchAndProcessGitcoinProjects();
   // fetchAndProcessRpgf3Projects();
-  // await fetchRFProjectsByRound(4);
+  await fetchRFProjectsByRound(4);
   // await fetchRFProjectsByRound(5); //TODO: It will fill on 20th Sep
   await fetchAndProcessRlProjects(5);
 };
