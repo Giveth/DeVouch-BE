@@ -48,7 +48,7 @@ export const updateOrCreateProject = async (
   // Remove project if prelimResult is "Remove"
   if (prelimResult && project[prelimResult] === "Remove") {
     // If project is imported, delete it from the database
-    if (existingProject && existingProject.imported) {
+    if (existingProject?.imported) {
       try {
         await dataSource
           .createQueryBuilder()
