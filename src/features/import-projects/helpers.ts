@@ -69,12 +69,18 @@ export const updateOrCreateProject = async (
           ...existingProject,
           imported: false,
         });
-        await dataSource
-          .createQueryBuilder()
-          .update(Project)
-          .set(updatedProject)
-          .where("id = :id", { id })
-          .execute();
+        try {
+          await dataSource
+            .createQueryBuilder()
+            .update(Project)
+            .set(updatedProject)
+            .where("id = :id", { id })
+            .execute();
+        } catch (error) {
+          console.log(
+            `[${new Date().toISOString()}] - ERROR: Failed to make project un-imported. Project ID: ${id}`
+          );
+        }
       }
     }
     return;
