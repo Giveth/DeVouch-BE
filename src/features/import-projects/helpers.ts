@@ -45,18 +45,43 @@ export const updateOrCreateProject = async (
   const descriptionHtml = descriptionHtmlField && project[descriptionHtmlField];
   const rfRound = rfRoundField && project[rfRoundField];
 
+  // Remove project if prelimResult is "Remove"
   if (prelimResult && project[prelimResult] === "Remove") {
-    if (existingProject) {
-      await dataSource
-        .createQueryBuilder()
-        .delete()
-        .from(Project)
-        .where("id = :id", { id })
-        .execute();
+    // If project is imported, delete it from the database
+    if (existingProject?.imported) {
+      try {
+        await dataSource
+          .createQueryBuilder()
+          .delete()
+          .from(Project)
+          .where("id = :id", { id })
+          .execute();
 
-      console.log(
-        `[${new Date().toISOString()}] - INFO: Project Deleted. Project ID: ${id}`
-      );
+        console.log(
+          `[${new Date().toISOString()}] - INFO: Project Deleted. Project ID: ${id}`
+        );
+      } catch (error) {
+        // make project as not imported if failed to delete because it may have some vouches
+        console.log(
+          `[${new Date().toISOString()}] - ERROR: Failed to delete project. Project ID: ${id}`
+        );
+        const updatedProject = new Project({
+          ...existingProject,
+          imported: false,
+        });
+        try {
+          await dataSource
+            .createQueryBuilder()
+            .update(Project)
+            .set(updatedProject)
+            .where("id = :id", { id })
+            .execute();
+        } catch (error) {
+          console.log(
+            `[${new Date().toISOString()}] - ERROR: Failed to make project un-imported. Project ID: ${id}`
+          );
+        }
+      }
     }
     return;
   }
