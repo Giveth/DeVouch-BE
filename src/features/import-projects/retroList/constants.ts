@@ -17,4 +17,5 @@ export const rlSourceConfig: SourceConfig = {
   imageField: "bannerImageUrl",
   urlField: "url",
   rfRoundField: "rfRound",
+  prelimResult: "prelimResult",
 };

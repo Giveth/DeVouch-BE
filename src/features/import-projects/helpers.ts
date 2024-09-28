@@ -18,6 +18,7 @@ export const updateOrCreateProject = async (
     urlField,
     imageField,
     rfRoundField,
+    prelimResult,
   } = sourConfig;
 
   const projectId = project[idField].toLowerCase();
@@ -43,6 +44,22 @@ export const updateOrCreateProject = async (
   const image = project[imageField];
   const descriptionHtml = descriptionHtmlField && project[descriptionHtmlField];
   const rfRound = rfRoundField && project[rfRoundField];
+
+  if (prelimResult && project[prelimResult] === "Remove") {
+    if (existingProject) {
+      await dataSource
+        .createQueryBuilder()
+        .delete()
+        .from(Project)
+        .where("id = :id", { id })
+        .execute();
+
+      console.log(
+        `[${new Date().toISOString()}] - INFO: Project Deleted. Project ID: ${id}`
+      );
+    }
+    return;
+  }
 
   if (existingProject) {
     const isUpdated =
