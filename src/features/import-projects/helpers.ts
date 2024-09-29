@@ -29,7 +29,7 @@ export const updateOrCreateProject = async (
     console.log(
       `[${new Date().toISOString()}] - ERROR: Failed to UPSERT project. Data source not found. Project ID: ${id}`
     );
-    return;
+    return id;
   }
 
   const existingProject = await dataSource
@@ -83,7 +83,7 @@ export const updateOrCreateProject = async (
               console.log(
                 `[${new Date().toISOString()}] - INFO: Project marked as not imported. Project ID: ${id}`
               );
-            } catch (error) {
+            } catch (updateError) {
               console.log(
                 `[${new Date().toISOString()}] - ERROR: Failed to mark project as not imported. Project ID: ${id}`
               );
@@ -103,7 +103,7 @@ export const updateOrCreateProject = async (
           console.log(
             `[${new Date().toISOString()}] - INFO: Project updated with removed round. Project ID: ${id}`
           );
-        } catch (error) {
+        } catch (updateError) {
           console.log(
             `[${new Date().toISOString()}] - ERROR: Failed to update project rfRounds. Project ID: ${id}`
           );
@@ -111,7 +111,7 @@ export const updateOrCreateProject = async (
       }
     }
     // If the project does not exist, nothing to do
-    return;
+    return id;
   }
 
   const descriptionSummary = getHtmlTextSummary(descriptionHtml || description);
@@ -203,6 +203,8 @@ export const updateOrCreateProject = async (
       );
     }
   }
+
+  return id;
 };
 
 const getHtmlTextSummary = (
