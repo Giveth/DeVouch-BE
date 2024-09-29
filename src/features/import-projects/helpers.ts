@@ -47,63 +47,96 @@ export const updateOrCreateProject = async (
 
   // Remove project if prelimResult is "Remove"
   if (prelimResult && project[prelimResult] === "Remove") {
-    // If project is imported, delete it from the database
-    if (existingProject?.imported) {
-      try {
-        await dataSource
-          .createQueryBuilder()
-          .delete()
-          .from(Project)
-          .where("id = :id", { id })
-          .execute();
+    if (existingProject) {
+      // Remove the current round from rfRounds
+      const updatedRfRounds = (existingProject.rfRounds || []).filter(
+        (rfr) => rfr !== rfRound
+      );
 
-        console.log(
-          `[${new Date().toISOString()}] - INFO: Project Deleted. Project ID: ${id}`
-        );
-      } catch (error) {
-        // make project as not imported if failed to delete because it may have some vouches
-        console.log(
-          `[${new Date().toISOString()}] - ERROR: Failed to delete project. Project ID: ${id}`
-        );
-        const updatedProject = new Project({
-          ...existingProject,
-          imported: false,
-        });
+      if (updatedRfRounds.length === 0) {
+        // If no rounds remain, delete the project
+        if (existingProject.imported) {
+          try {
+            await dataSource
+              .createQueryBuilder()
+              .delete()
+              .from(Project)
+              .where("id = :id", { id })
+              .execute();
+
+            console.log(
+              `[${new Date().toISOString()}] - INFO: Project Deleted. Project ID: ${id}`
+            );
+          } catch (error) {
+            // Mark project as not imported if failed to delete
+            console.log(
+              `[${new Date().toISOString()}] - ERROR: Failed to delete project. Project ID: ${id}`
+            );
+            try {
+              await dataSource
+                .createQueryBuilder()
+                .update(Project)
+                .set({ imported: false, rfRounds: updatedRfRounds })
+                .where("id = :id", { id })
+                .execute();
+
+              console.log(
+                `[${new Date().toISOString()}] - INFO: Project marked as not imported. Project ID: ${id}`
+              );
+            } catch (error) {
+              console.log(
+                `[${new Date().toISOString()}] - ERROR: Failed to mark project as not imported. Project ID: ${id}`
+              );
+            }
+          }
+        }
+      } else {
+        // Update the project with the updated rfRounds
         try {
           await dataSource
             .createQueryBuilder()
             .update(Project)
-            .set(updatedProject)
+            .set({ rfRounds: updatedRfRounds })
             .where("id = :id", { id })
             .execute();
+
+          console.log(
+            `[${new Date().toISOString()}] - INFO: Project updated with removed round. Project ID: ${id}`
+          );
         } catch (error) {
           console.log(
-            `[${new Date().toISOString()}] - ERROR: Failed to make project un-imported. Project ID: ${id}`
+            `[${new Date().toISOString()}] - ERROR: Failed to update project rfRounds. Project ID: ${id}`
           );
         }
       }
     }
+    // If the project does not exist, nothing to do
     return;
   }
 
+  const descriptionSummary = getHtmlTextSummary(descriptionHtml || description);
+
   if (existingProject) {
+    // Update existing project
     const isUpdated =
       existingProject.title !== title ||
       existingProject.description !== description ||
       existingProject.url !== url ||
       existingProject.image !== image ||
-      (rfRound && !existingProject.rfRounds?.some((rfr) => rfr === rfRound)) ||
       existingProject.descriptionHtml !== descriptionHtml ||
       (!existingProject.descriptionSummary && description);
 
-    const descriptionSummary = getHtmlTextSummary(
-      descriptionHtml || description
-    );
+    // Add the current round to rfRounds if not already present
+    const rfRoundsSet = new Set(existingProject.rfRounds || []);
+    if (rfRound) {
+      rfRoundsSet.add(rfRound);
+    }
 
-    if (isUpdated) {
-      const rfRounds = new Set(existingProject.rfRounds || []);
-      rfRound && rfRounds.add(rfRound);
-      const updatedProject = new Project({
+    if (
+      isUpdated ||
+      rfRoundsSet.size !== (existingProject.rfRounds || []).length
+    ) {
+      const updatedProject = {
         ...existingProject,
         title,
         description,
@@ -112,25 +145,29 @@ export const updateOrCreateProject = async (
         descriptionHtml,
         descriptionSummary,
         lastUpdatedTimestamp: new Date(),
-        rfRounds: Array.from(rfRounds),
+        rfRounds: Array.from(rfRoundsSet),
         imported: true,
-      });
+      };
 
-      await dataSource
-        .createQueryBuilder()
-        .update(Project)
-        .set(updatedProject)
-        .where("id = :id", { id })
-        .execute();
+      try {
+        await dataSource
+          .createQueryBuilder()
+          .update(Project)
+          .set(updatedProject)
+          .where("id = :id", { id })
+          .execute();
 
-      console.log(
-        `[${new Date().toISOString()}] - INFO: Project Updated. Project ID: ${id}`
-      );
+        console.log(
+          `[${new Date().toISOString()}] - INFO: Project Updated. Project ID: ${id}`
+        );
+      } catch (error) {
+        console.log(
+          `[${new Date().toISOString()}] - ERROR: Failed to update project. Project ID: ${id}`
+        );
+      }
     }
   } else {
-    const descriptionSummary = getHtmlTextSummary(
-      descriptionHtml || description
-    );
+    // Create new project
     const newProject = new Project({
       id,
       title,
@@ -149,16 +186,22 @@ export const updateOrCreateProject = async (
       imported: true,
     });
 
-    await dataSource
-      .createQueryBuilder()
-      .insert()
-      .into(Project)
-      .values([newProject])
-      .execute();
+    try {
+      await dataSource
+        .createQueryBuilder()
+        .insert()
+        .into(Project)
+        .values([newProject])
+        .execute();
 
-    console.log(
-      `[${new Date().toISOString()}] - INFO: Project Created. Project ID: ${id}`
-    );
+      console.log(
+        `[${new Date().toISOString()}] - INFO: Project Created. Project ID: ${id}`
+      );
+    } catch (error) {
+      console.log(
+        `[${new Date().toISOString()}] - ERROR: Failed to create project. Project ID: ${id}`
+      );
+    }
   }
 };
 
