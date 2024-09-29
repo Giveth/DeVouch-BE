@@ -85,7 +85,7 @@ export const updateOrCreateProject = async (
               );
             } catch (updateError) {
               console.log(
-                `[${new Date().toISOString()}] - ERROR: Failed to mark project as not imported. Project ID: ${id}`
+                `[${new Date().toISOString()}] - ERROR: Failed to mark project as not imported. Project ID: ${id}, Error: ${updateError.message}`
               );
             }
           }
