@@ -70,7 +70,7 @@ export const updateOrCreateProject = async (
           } catch (error) {
             // Mark project as not imported if failed to delete
             console.log(
-              `[${new Date().toISOString()}] - ERROR: Failed to delete project. Project ID: ${id}`
+              `[${new Date().toISOString()}] - ERROR: Failed to delete project. Project ID: ${id}, Error: ${error.message}`
             );
             try {
               await dataSource
