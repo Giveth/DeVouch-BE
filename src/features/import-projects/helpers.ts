@@ -162,7 +162,7 @@ export const updateOrCreateProject = async (
         );
       } catch (error) {
         console.log(
-          `[${new Date().toISOString()}] - ERROR: Failed to update project. Project ID: ${id}`
+          `[${new Date().toISOString()}] - ERROR: Failed to update project. Project ID: ${id}, Error: ${error.message}`
         );
       }
     }
