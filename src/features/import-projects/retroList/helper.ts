@@ -123,6 +123,7 @@ export const manageProjectRemovals = async (
           .from(Project)
           .where("id IN (:...ids)", { ids: projectIdsToDelete })
           .execute();
+
         console.log(
           `[${new Date().toISOString()}] - INFO: Projects Deleted. Project IDs: ${projectIdsToDelete.join(
             ", "
@@ -148,14 +149,13 @@ export const manageProjectRemovals = async (
           .update(Project)
           .set({ imported: false, rfRounds: [round] })
           .where("id IN (:...ids)", { ids: projectIdsToMakeUnImported })
-          .execute()
-          .then(() => {
-            console.log(
-              `[${new Date().toISOString()}] - INFO: Projects marked as not imported. Project IDs: ${projectIdsToMakeUnImported.join(
-                ", "
-              )}`
-            );
-          });
+          .execute();
+
+        console.log(
+          `[${new Date().toISOString()}] - INFO: Projects marked as not imported. Project IDs: ${projectIdsToMakeUnImported.join(
+            ", "
+          )}`
+        );
       } catch (error: any) {
         console.log(
           `[${new Date().toISOString()}] - ERROR: Failed to mark projects as not imported. Project IDs: ${projectIdsToMakeUnImported.join(
