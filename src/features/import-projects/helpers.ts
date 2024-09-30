@@ -45,73 +45,9 @@ export const updateOrCreateProject = async (
   const descriptionHtml = descriptionHtmlField && project[descriptionHtmlField];
   const rfRound = rfRoundField && project[rfRoundField];
 
-  // Remove project if prelimResult is "Remove"
+  // Skip project if prelimResult is "Remove"
   if (prelimResult && project[prelimResult] === "Remove") {
-    if (existingProject) {
-      // Remove the current round from rfRounds
-      const updatedRfRounds = (existingProject.rfRounds || []).filter(
-        (rfr) => rfr !== rfRound
-      );
-
-      if (updatedRfRounds.length === 0) {
-        // If no rounds remain, delete the project
-        if (existingProject.imported) {
-          try {
-            await dataSource
-              .createQueryBuilder()
-              .delete()
-              .from(Project)
-              .where("id = :id", { id })
-              .execute();
-
-            console.log(
-              `[${new Date().toISOString()}] - INFO: Project Deleted. Project ID: ${id}`
-            );
-          } catch (error: any) {
-            // Mark project as not imported if failed to delete
-            console.log(
-              `[${new Date().toISOString()}] - ERROR: Failed to delete project. Project ID: ${id}, Error: ${error.message}`
-            );
-            try {
-              await dataSource
-                .createQueryBuilder()
-                .update(Project)
-                .set({ imported: false, rfRounds: updatedRfRounds })
-                .where("id = :id", { id })
-                .execute();
-
-              console.log(
-                `[${new Date().toISOString()}] - INFO: Project marked as not imported. Project ID: ${id}`
-              );
-            } catch (updateError: any) {
-              console.log(
-                `[${new Date().toISOString()}] - ERROR: Failed to mark project as not imported. Project ID: ${id}, Error: ${updateError.message}`
-              );
-            }
-          }
-        }
-      } else {
-        // Update the project with the updated rfRounds
-        try {
-          await dataSource
-            .createQueryBuilder()
-            .update(Project)
-            .set({ rfRounds: updatedRfRounds })
-            .where("id = :id", { id })
-            .execute();
-
-          console.log(
-            `[${new Date().toISOString()}] - INFO: Project updated with removed round. Project ID: ${id}`
-          );
-        } catch (updateError) {
-          console.log(
-            `[${new Date().toISOString()}] - ERROR: Failed to update project rfRounds. Project ID: ${id}`
-          );
-        }
-      }
-    }
-    // If the project does not exist, nothing to do
-    return id;
+    return;
   }
 
   const descriptionSummary = getHtmlTextSummary(descriptionHtml || description);
