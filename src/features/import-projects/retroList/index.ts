@@ -14,7 +14,7 @@ export const fetchAndProcessRlProjects = async (round: number) => {
       const processedProject = {
         ...project,
         url: generateRlUrl(project),
-        rfRound: round, // Set rfRound using rfRoundField
+        rfRound: round,
       };
 
       const processedId = await updateOrCreateProject(
