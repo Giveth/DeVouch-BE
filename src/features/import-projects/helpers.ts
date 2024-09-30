@@ -59,19 +59,16 @@ export const updateOrCreateProject = async (
       existingProject.description !== description ||
       existingProject.url !== url ||
       existingProject.image !== image ||
+      (rfRound && !existingProject.rfRounds?.some((rfr) => rfr === rfRound)) ||
       existingProject.descriptionHtml !== descriptionHtml ||
       (!existingProject.descriptionSummary && description);
 
-    // Add the current round to rfRounds if not already present
-    const rfRoundsSet = new Set(existingProject.rfRounds || []);
-    if (rfRound) {
-      rfRoundsSet.add(rfRound);
-    }
-
-    if (
-      isUpdated ||
-      rfRoundsSet.size !== (existingProject.rfRounds || []).length
-    ) {
+    if (isUpdated) {
+      // Add the current round to rfRounds if not already present
+      const rfRoundsSet = new Set(existingProject.rfRounds || []);
+      if (rfRound) {
+        rfRoundsSet.add(rfRound);
+      }
       const updatedProject = {
         ...existingProject,
         title,
