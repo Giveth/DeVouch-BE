@@ -133,9 +133,9 @@ export const updateOrCreateProject = async (
       console.log(
         `[${new Date().toISOString()}] - INFO: Project Created. Project ID: ${id}`
       );
-    } catch (error) {
+    } catch (error: any) {
       console.log(
-        `[${new Date().toISOString()}] - ERROR: Failed to create project. Project ID: ${id}`
+        `[${new Date().toISOString()}] - ERROR: Failed to create project. Project ID: ${id}, Error: ${error.message}`
       );
     }
   }
