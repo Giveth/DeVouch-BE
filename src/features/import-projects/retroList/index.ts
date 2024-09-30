@@ -1,6 +1,6 @@
 import { updateOrCreateProject } from "../helpers";
 import { rlSourceConfig } from "./constants";
-import { generateRlUrl, removeNonExistingProjects } from "./helper";
+import { generateRlUrl, manageProjectRemovals } from "./helper";
 import { fetchRlProjects } from "./service";
 
 export const fetchAndProcessRlProjects = async (round: number) => {
@@ -17,17 +17,11 @@ export const fetchAndProcessRlProjects = async (round: number) => {
         rfRound: round,
       };
 
-      const processedId = await updateOrCreateProject(
-        processedProject,
-        rlSourceConfig
-      );
-      if (processedId) {
-        processedProjectIds.push(processedId);
-      }
+      await updateOrCreateProject(processedProject, rlSourceConfig);
     }
 
     // After processing all new projects, handle projects not in the new dataset for the current round
-    await removeNonExistingProjects(processedProjectIds, rlSourceConfig, round);
+    await manageProjectRemovals(data, rlSourceConfig, round);
   } catch (error: any) {
     console.log("error on fetchAndProcessRlProjects", error.message);
   }
