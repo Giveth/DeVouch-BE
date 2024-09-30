@@ -7,7 +7,7 @@ import { SourceConfig } from "./types";
 
 export const updateOrCreateProject = async (
   project: any,
-  sourConfig: SourceConfig
+  sourceConfig: SourceConfig
 ) => {
   const {
     source,
@@ -19,7 +19,7 @@ export const updateOrCreateProject = async (
     imageField,
     rfRoundField,
     prelimResult,
-  } = sourConfig;
+  } = sourceConfig;
 
   const projectId = project[idField].toLowerCase();
   const id = `${source}-${projectId}`;

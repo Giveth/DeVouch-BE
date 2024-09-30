@@ -9,7 +9,7 @@ export const generateRlUrl = (project: RlProjectInfo) => {
 
 export const manageProjectRemovals = async (
   newList: RlProjectInfo[] | null,
-  sourConfig: SourceConfig,
+  sourceConfig: SourceConfig,
   round: number // Pass the current round
 ) => {
   if (newList === null) {
@@ -35,7 +35,7 @@ export const manageProjectRemovals = async (
       .getRepository(Project)
       .createQueryBuilder("project")
       .select("project.id")
-      .where("project.source = :source", { source: sourConfig.source })
+      .where("project.source = :source", { source: sourceConfig.source })
       .andWhere(":round = ANY(project.rfRounds)", { round }) // Only projects in the current round
       .getMany()
       .then((projects) => projects.map((proj) => proj.id));
