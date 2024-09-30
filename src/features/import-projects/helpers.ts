@@ -60,7 +60,7 @@ export const updateOrCreateProject = async (
       existingProject.url !== url ||
       existingProject.image !== image ||
       (rfRound && !existingProject.rfRounds?.some((rfr) => rfr === rfRound)) ||
-      existingProject.descriptionHtml !== descriptionHtml ||
+      existingProject.descriptionHtml != descriptionHtml ||
       (!existingProject.descriptionSummary && description);
 
     if (isUpdated) {
