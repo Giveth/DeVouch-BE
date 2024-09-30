@@ -28,8 +28,12 @@ export const manageProjectRemovals = async (
     }
 
     const shouldKeepProjects = newList.map((project) =>
-      project.prelimResult === "Keep" ? project.id : null
+      project.prelimResult === "Keep"
+        ? `${sourceConfig.source}-${project.id}`
+        : null
     );
+
+    console.log("shouldKeepProjects", shouldKeepProjects);
 
     const existingProjectsIds = await dataSource
       .getRepository(Project)
@@ -40,9 +44,13 @@ export const manageProjectRemovals = async (
       .getMany()
       .then((projects) => projects.map((proj) => proj.id));
 
+    console.log("existingProjectsIds", existingProjectsIds);
+
     const projectIdsToManipulate = existingProjectsIds.filter(
       (id) => !shouldKeepProjects.includes(id)
     );
+
+    console.log("projectIdsToManipulate", projectIdsToManipulate);
 
     if (projectIdsToManipulate.length === 0) {
       // No projects to Manipulate
