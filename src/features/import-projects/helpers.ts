@@ -67,7 +67,7 @@ export const updateOrCreateProject = async (
             console.log(
               `[${new Date().toISOString()}] - INFO: Project Deleted. Project ID: ${id}`
             );
-          } catch (error) {
+          } catch (error: any) {
             // Mark project as not imported if failed to delete
             console.log(
               `[${new Date().toISOString()}] - ERROR: Failed to delete project. Project ID: ${id}, Error: ${error.message}`
@@ -83,7 +83,7 @@ export const updateOrCreateProject = async (
               console.log(
                 `[${new Date().toISOString()}] - INFO: Project marked as not imported. Project ID: ${id}`
               );
-            } catch (updateError) {
+            } catch (updateError: any) {
               console.log(
                 `[${new Date().toISOString()}] - ERROR: Failed to mark project as not imported. Project ID: ${id}, Error: ${updateError.message}`
               );
@@ -160,7 +160,7 @@ export const updateOrCreateProject = async (
         console.log(
           `[${new Date().toISOString()}] - INFO: Project Updated. Project ID: ${id}`
         );
-      } catch (error) {
+      } catch (error: any) {
         console.log(
           `[${new Date().toISOString()}] - ERROR: Failed to update project. Project ID: ${id}, Error: ${error.message}`
         );
