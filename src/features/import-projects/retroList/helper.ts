@@ -69,10 +69,10 @@ export const removeNonExistingProjects = async (
           console.log(
             `[${new Date().toISOString()}] - INFO: Project Deleted. Project ID: ${project.id}`
           );
-        } catch (error) {
+        } catch (error: any) {
           // Mark project as not imported if failed to delete
           console.log(
-            `[${new Date().toISOString()}] - ERROR: Failed to delete project. Project ID: ${project.id}`
+            `[${new Date().toISOString()}] - ERROR: Failed to delete project. Project ID: ${project.id}. Error: ${error.message}`
           );
           try {
             await dataSource
@@ -85,9 +85,9 @@ export const removeNonExistingProjects = async (
             console.log(
               `[${new Date().toISOString()}] - INFO: Project marked as not imported. Project ID: ${project.id}`
             );
-          } catch (updateError) {
+          } catch (updateError: any) {
             console.log(
-              `[${new Date().toISOString()}] - ERROR: Failed to mark project as not imported. Project ID: ${project.id}`
+              `[${new Date().toISOString()}] - ERROR: Failed to mark project as not imported. Project ID: ${project.id}. Error: ${updateError.message}`
             );
           }
         }
@@ -105,9 +105,9 @@ export const removeNonExistingProjects = async (
         console.log(
           `[${new Date().toISOString()}] - INFO: Project updated with removed round. Project ID: ${project.id}`
         );
-      } catch (updateError) {
+      } catch (updateError: any) {
         console.log(
-          `[${new Date().toISOString()}] - ERROR: Failed to update project rfRounds. Project ID: ${project.id}`
+          `[${new Date().toISOString()}] - ERROR: Failed to update project rfRounds. Project ID: ${project.id}. Error: ${updateError.message}`
         );
       }
     }
