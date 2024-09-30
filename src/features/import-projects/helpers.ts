@@ -29,7 +29,7 @@ export const updateOrCreateProject = async (
     console.log(
       `[${new Date().toISOString()}] - ERROR: Failed to UPSERT project. Data source not found. Project ID: ${id}`
     );
-    return id;
+    return;
   }
 
   const existingProject = await dataSource
@@ -139,8 +139,6 @@ export const updateOrCreateProject = async (
       );
     }
   }
-
-  return id;
 };
 
 const getHtmlTextSummary = (
