@@ -7,7 +7,7 @@ import { SourceConfig } from "./types";
 
 export const updateOrCreateProject = async (
   project: any,
-  sourConfig: SourceConfig
+  sourceConfig: SourceConfig
 ) => {
   const {
     source,
@@ -19,7 +19,7 @@ export const updateOrCreateProject = async (
     imageField,
     rfRoundField,
     prelimResult,
-  } = sourConfig;
+  } = sourceConfig;
 
   const projectId = project[idField].toLowerCase();
   const id = `${source}-${projectId}`;
@@ -45,65 +45,31 @@ export const updateOrCreateProject = async (
   const descriptionHtml = descriptionHtmlField && project[descriptionHtmlField];
   const rfRound = rfRoundField && project[rfRoundField];
 
-  // Remove project if prelimResult is "Remove"
+  // Skip project if prelimResult is "Remove"
   if (prelimResult && project[prelimResult] === "Remove") {
-    // If project is imported, delete it from the database
-    if (existingProject?.imported) {
-      try {
-        await dataSource
-          .createQueryBuilder()
-          .delete()
-          .from(Project)
-          .where("id = :id", { id })
-          .execute();
-
-        console.log(
-          `[${new Date().toISOString()}] - INFO: Project Deleted. Project ID: ${id}`
-        );
-      } catch (error) {
-        // make project as not imported if failed to delete because it may have some vouches
-        console.log(
-          `[${new Date().toISOString()}] - ERROR: Failed to delete project. Project ID: ${id}`
-        );
-        const updatedProject = new Project({
-          ...existingProject,
-          imported: false,
-        });
-        try {
-          await dataSource
-            .createQueryBuilder()
-            .update(Project)
-            .set(updatedProject)
-            .where("id = :id", { id })
-            .execute();
-        } catch (error) {
-          console.log(
-            `[${new Date().toISOString()}] - ERROR: Failed to make project un-imported. Project ID: ${id}`
-          );
-        }
-      }
-    }
     return;
   }
 
+  const descriptionSummary = getHtmlTextSummary(descriptionHtml || description);
+
   if (existingProject) {
+    // Update existing project
     const isUpdated =
       existingProject.title !== title ||
       existingProject.description !== description ||
       existingProject.url !== url ||
       existingProject.image !== image ||
       (rfRound && !existingProject.rfRounds?.some((rfr) => rfr === rfRound)) ||
-      existingProject.descriptionHtml !== descriptionHtml ||
+      existingProject.descriptionHtml != descriptionHtml ||
       (!existingProject.descriptionSummary && description);
 
-    const descriptionSummary = getHtmlTextSummary(
-      descriptionHtml || description
-    );
-
     if (isUpdated) {
-      const rfRounds = new Set(existingProject.rfRounds || []);
-      rfRound && rfRounds.add(rfRound);
-      const updatedProject = new Project({
+      // Add the current round to rfRounds if not already present
+      const rfRoundsSet = new Set(existingProject.rfRounds || []);
+      if (rfRound) {
+        rfRoundsSet.add(rfRound);
+      }
+      const updatedProject = {
         ...existingProject,
         title,
         description,
@@ -112,25 +78,29 @@ export const updateOrCreateProject = async (
         descriptionHtml,
         descriptionSummary,
         lastUpdatedTimestamp: new Date(),
-        rfRounds: Array.from(rfRounds),
+        rfRounds: Array.from(rfRoundsSet),
         imported: true,
-      });
+      };
 
-      await dataSource
-        .createQueryBuilder()
-        .update(Project)
-        .set(updatedProject)
-        .where("id = :id", { id })
-        .execute();
+      try {
+        await dataSource
+          .createQueryBuilder()
+          .update(Project)
+          .set(updatedProject)
+          .where("id = :id", { id })
+          .execute();
 
-      console.log(
-        `[${new Date().toISOString()}] - INFO: Project Updated. Project ID: ${id}`
-      );
+        console.log(
+          `[${new Date().toISOString()}] - INFO: Project Updated. Project ID: ${id}`
+        );
+      } catch (error: any) {
+        console.log(
+          `[${new Date().toISOString()}] - ERROR: Failed to update project. Project ID: ${id}, Error: ${error.message}`
+        );
+      }
     }
   } else {
-    const descriptionSummary = getHtmlTextSummary(
-      descriptionHtml || description
-    );
+    // Create new project
     const newProject = new Project({
       id,
       title,
@@ -149,16 +119,22 @@ export const updateOrCreateProject = async (
       imported: true,
     });
 
-    await dataSource
-      .createQueryBuilder()
-      .insert()
-      .into(Project)
-      .values([newProject])
-      .execute();
+    try {
+      await dataSource
+        .createQueryBuilder()
+        .insert()
+        .into(Project)
+        .values([newProject])
+        .execute();
 
-    console.log(
-      `[${new Date().toISOString()}] - INFO: Project Created. Project ID: ${id}`
-    );
+      console.log(
+        `[${new Date().toISOString()}] - INFO: Project Created. Project ID: ${id}`
+      );
+    } catch (error: any) {
+      console.log(
+        `[${new Date().toISOString()}] - ERROR: Failed to create project. Project ID: ${id}, Error: ${error.message}`
+      );
+    }
   }
 };
 
