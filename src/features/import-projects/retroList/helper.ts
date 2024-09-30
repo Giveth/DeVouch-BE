@@ -30,7 +30,7 @@ export const manageProjectRemovals = async (
     const shouldKeepProjects = newList.map((project) =>
       project.prelimResult === "Keep"
         ? `${sourceConfig.source}-${project.id}`
-        : null
+        : undefined
     );
 
     console.log("shouldKeepProjects", shouldKeepProjects);
