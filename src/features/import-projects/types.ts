@@ -7,4 +7,5 @@ export interface SourceConfig {
   urlField: string;
   imageField: string;
   rfRoundField?: string;
+  prelimResult?: string;
 }
