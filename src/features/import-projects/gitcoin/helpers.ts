@@ -30,6 +30,9 @@ export const processProjectsBatch = async (
       descriptionHtml: description
         ? converter.makeHtml(description)
         : undefined,
+      creationDate: project.metadata.createdAt
+        ? new Date(project.metadata.createdAt * 1000).toISOString() // Convert to ISO 8601
+        : null,
     };
     await updateOrCreateProject(processedProject, gitcoinSourceConfig);
   }
