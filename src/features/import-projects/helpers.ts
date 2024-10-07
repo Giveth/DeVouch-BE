@@ -19,6 +19,7 @@ export const updateOrCreateProject = async (
     imageField,
     rfRoundField,
     prelimResult,
+    sourceCreatedAtField,
   } = sourceConfig;
 
   const projectId = project[idField].toLowerCase();
@@ -44,6 +45,7 @@ export const updateOrCreateProject = async (
   const image = project[imageField];
   const descriptionHtml = descriptionHtmlField && project[descriptionHtmlField];
   const rfRound = rfRoundField && project[rfRoundField];
+  const sourceCreatedAt = sourceCreatedAtField && project[sourceCreatedAtField];
 
   // Skip project if prelimResult is "Remove"
   if (prelimResult && project[prelimResult] === "Remove") {
@@ -61,7 +63,8 @@ export const updateOrCreateProject = async (
       existingProject.image !== image ||
       (rfRound && !existingProject.rfRounds?.some((rfr) => rfr === rfRound)) ||
       existingProject.descriptionHtml != descriptionHtml ||
-      (!existingProject.descriptionSummary && description);
+      (!existingProject.descriptionSummary && description) ||
+      existingProject.sourceCreatedAt != sourceCreatedAt;
 
     if (isUpdated) {
       // Add the current round to rfRounds if not already present
@@ -79,6 +82,7 @@ export const updateOrCreateProject = async (
         descriptionSummary,
         lastUpdatedTimestamp: new Date(),
         rfRounds: Array.from(rfRoundsSet),
+        sourceCreatedAt,
         imported: true,
       };
 
@@ -115,6 +119,7 @@ export const updateOrCreateProject = async (
       totalVouches: 0,
       totalFlags: 0,
       totalAttests: 0,
+      sourceCreatedAt,
       lastUpdatedTimestamp: new Date(),
       imported: true,
     });
