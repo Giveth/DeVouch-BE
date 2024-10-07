@@ -103,4 +103,10 @@ export class Project {
      */
     @Column_("int4", {array: true, nullable: true})
     rfRounds!: (number)[] | undefined | null
+
+    /**
+     * Source Creation Timestamp
+     */
+    @Column_("timestamp with time zone", {nullable: true})
+    sourceCreatedAt!: Date | undefined | null
 }
