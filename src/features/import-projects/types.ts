@@ -8,5 +8,5 @@ export interface SourceConfig {
   imageField: string;
   rfRoundField?: string;
   prelimResult?: string;
-  sourceCreatedAtField: string;
+  sourceCreatedAtField?: string;
 }
