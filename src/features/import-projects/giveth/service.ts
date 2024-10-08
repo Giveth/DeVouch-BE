@@ -17,6 +17,7 @@ export const fetchGivethProjectsBatch = async (limit: number, skip: number) => {
             image
             slug
             description
+            creationDate
           }
         }
       }`,

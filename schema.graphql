@@ -74,6 +74,8 @@ type Project @entity {
   attestedOrganisations: [OrganisationProject!]! @derivedFrom(field: "project")
   "Rounds in which the project is included"
   rfRounds: [Int!]
+  "Source Creation Timestamp"
+  sourceCreatedAt: DateTime
 }
 
 type OrganisationProject @entity {

@@ -8,8 +8,6 @@ export const fetchAndProcessRlProjects = async (round: number) => {
     const data = await fetchRlProjects(round);
     if (!data) return;
 
-    const processedProjectIds: string[] = [];
-
     for (const project of data) {
       const processedProject = {
         ...project,
