@@ -23,4 +23,4 @@ jobs:
           git pull
           docker compose stop devouch squid-db
           docker compose up -d --build
-          docker system prune -a
+          docker system prune -af
