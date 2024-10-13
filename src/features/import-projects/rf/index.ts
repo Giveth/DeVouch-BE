@@ -46,7 +46,7 @@ export const fetchRFProjectsByRound = async (round: number) => {
     }
   } catch (error) {
     console.log(
-      `Error fetching projects for round: ${round} at offset: ${offset}`,
+      `[${new Date().toISOString()}] - Error fetching projects for round: ${round} at offset: ${offset}`,
       error
     );
   }
