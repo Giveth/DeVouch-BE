@@ -14,6 +14,7 @@ export const task = async () => {
   await fetchRFProjectsByRound(4);
   // await fetchRFProjectsByRound(5); //TODO: It will fill on 20th Sep
   await fetchAndProcessRlProjects(5);
+  await fetchAndProcessRlProjects(6);
 };
 
 export const importProjects = async () => {
