@@ -13,7 +13,7 @@ export const fetchRFProjectsByRound = async (round: number) => {
   );
 
   if (!AGORA_API_KEY) {
-    console.log("AGORA_API_KEY is not set");
+    console.log(`[${new Date().toISOString()}] - AGORA_API_KEY is not set`);
     return;
   }
 
