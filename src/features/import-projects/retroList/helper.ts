@@ -30,7 +30,6 @@ export const manageProjectRemovals = async (
     const shouldKeepProjects = newList
       .filter((project) => project.prelimResult === "Keep")
       .map((project) => `${sourceConfig.source}-${project.id}`);
-    console.log("shouldKeepProjects", shouldKeepProjects);
 
     const existingProjectsIds = await dataSource
       .getRepository(Project)
@@ -40,8 +39,6 @@ export const manageProjectRemovals = async (
       .andWhere(":round = ANY(project.rfRounds)", { round }) // Only projects in the current round
       .getMany()
       .then((projects) => projects.map((proj) => proj.id));
-
-    console.log("existingProjectsIds", existingProjectsIds);
 
     const projectIdsToManipulate = existingProjectsIds.filter(
       (id) => !shouldKeepProjects.includes(id)

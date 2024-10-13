@@ -13,22 +13,20 @@ export const fetchRFProjectsByRound = async (round: number) => {
   );
 
   if (!AGORA_API_KEY) {
-    console.error("AGORA_API_KEY is not set");
+    console.log(`[${new Date().toISOString()}] - AGORA_API_KEY is not set`);
     return;
   }
 
   try {
     while (hasNext) {
-      const response = await fetch(
-        `${RF_API_URL}/retrofunding/rounds/${round}/projects?limit=${limit}&offset=${offset}`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${AGORA_API_KEY}`,
-          },
-        }
-      );
+      const address = `${RF_API_URL}/retrofunding/rounds/${round}/projects?limit=${limit}&offset=${offset}`;
+      const response = await fetch(address, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${AGORA_API_KEY}`,
+        },
+      });
       console.log(
         `[${new Date().toISOString()}] - Fetching projects for round: ${round} at offset: ${offset} - ${response.status} - ${response.ok}`
       );
@@ -47,8 +45,8 @@ export const fetchRFProjectsByRound = async (round: number) => {
       offset = res.meta.next_offset;
     }
   } catch (error) {
-    console.error(
-      `Error fetching projects for round: ${round} at offset: ${offset}`,
+    console.log(
+      `[${new Date().toISOString()}] - Error fetching projects for round: ${round} at offset: ${offset}`,
       error
     );
   }
