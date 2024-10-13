@@ -45,7 +45,7 @@ export const fetchRFProjectsByRound = async (round: number) => {
       offset = res.meta.next_offset;
     }
   } catch (error) {
-    console.error(
+    console.log(
       `Error fetching projects for round: ${round} at offset: ${offset}`,
       error
     );
