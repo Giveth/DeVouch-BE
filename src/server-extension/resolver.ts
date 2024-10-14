@@ -11,14 +11,13 @@ export class ProjectResolver {
 
   @Query(() => [ProjectType])
   async getProjectsSortedByVouchOrFlag(
-    @Arg("orgIds", () => [String]) orgIds: string[], // Array of organization IDs
-    @Arg("sortBy", () => String) sortBy: "vouch" | "flag", // Sort by vouch or flag
+    @Arg("orgIds", () => [String]) orgIds: string[],
+    @Arg("sortBy", () => String) sortBy: "vouch" | "flag",
     @Info() info: GraphQLResolveInfo
   ): Promise<ProjectType[]> {
     try {
       const manager = await this.tx();
 
-      // Determine whether we are sorting by vouches (true) or flags (false)
       const vouchValue = sortBy === "vouch" ? true : false;
 
       console.log("orgIds", orgIds);
@@ -26,7 +25,6 @@ export class ProjectResolver {
       const selectedFields = getSelectedFields(info);
       const fields = selectedFields.join(", ");
 
-      // Create raw SQL query
       const query = `
     SELECT 
       ${fields}, 
@@ -48,13 +46,11 @@ export class ProjectResolver {
       SUM(organisation_project.count) DESC;
   `;
 
-      // Execute the query and pass in the organization IDs and vouchValue as parameters
       const rawProjects = await manager.query(query);
 
-      // Map raw SQL result into ProjectType
       return rawProjects.map((row: any) => ({
         id: row.project_id,
-        title: row.project_title ?? "Untitled Project", // Handle null titles
+        title: row.project_title ?? "Untitled Project",
         attestedOrganisations: [
           {
             vouch: vouchValue,
