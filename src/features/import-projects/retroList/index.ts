@@ -3,7 +3,10 @@ import { rlSourceConfig } from "./constants";
 import { generateRlUrl, manageProjectRemovals } from "./helper";
 import { fetchRlProjects } from "./service";
 
-export const fetchAndProcessRlProjects = async (round: number) => {
+export const fetchAndProcessRlProjects = async (
+  round: number,
+  shouldHandlePrelimResult: boolean = true
+) => {
   try {
     const data = await fetchRlProjects(round);
     if (!data) return;
@@ -15,7 +18,8 @@ export const fetchAndProcessRlProjects = async (round: number) => {
         rfRound: round,
       };
 
-      await updateOrCreateProject(processedProject, rlSourceConfig);
+      if (shouldHandlePrelimResult)
+        await updateOrCreateProject(processedProject, rlSourceConfig);
     }
 
     // After processing all new projects, handle projects not in the new dataset for the current round

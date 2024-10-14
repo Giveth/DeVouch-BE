@@ -7,6 +7,9 @@ export const RL_API_URLS: Record<RoundNumber, string> = {
   5:
     process.env.RL5_API_URL ||
     "https://round5-api-eas.retrolist.app/5/projects",
+  6:
+    process.env.RL6_API_URL ||
+    "https://round6-api-eas.retrolist.app/6/projects",
 };
 
 export const rlSourceConfig: SourceConfig = {
