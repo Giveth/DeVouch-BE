@@ -29,6 +29,6 @@ export class ProjectType {
   @Field(() => String, { nullable: true }) // Explicitly define the GraphQL type for title
   title?: string | null;
 
-  @Field(() => [OrganisationProjectType])
-  attestedOrganisations!: OrganisationProjectType[];
+  // @Field(() => [OrganisationProjectType])
+  // attestedOrganisations!: OrganisationProjectType[];
 }
