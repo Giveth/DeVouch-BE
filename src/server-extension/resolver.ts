@@ -1,7 +1,9 @@
 import "reflect-metadata";
-import { Arg, Query, Resolver } from "type-graphql";
+import { GraphQLResolveInfo } from "graphql";
+import { Arg, Info, Query, Resolver } from "type-graphql";
 import type { EntityManager } from "typeorm";
 import { ProjectType } from "./types"; // Custom ProjectType
+import { getSelectedFields } from "./helper";
 
 @Resolver()
 export class ProjectResolver {
@@ -10,7 +12,8 @@ export class ProjectResolver {
   @Query(() => [ProjectType])
   async getProjectsSortedByVouchOrFlag(
     @Arg("orgIds", () => [String]) orgIds: string[], // Array of organization IDs
-    @Arg("sortBy", () => String) sortBy: "vouch" | "flag" // Sort by vouch or flag
+    @Arg("sortBy", () => String) sortBy: "vouch" | "flag", // Sort by vouch or flag
+    @Info() info: GraphQLResolveInfo
   ): Promise<ProjectType[]> {
     try {
       const manager = await this.tx();
@@ -20,30 +23,30 @@ export class ProjectResolver {
 
       console.log("orgIds", orgIds);
 
+      const selectedFields = getSelectedFields(info);
+      const fields = selectedFields.join(", ");
+
       // Create raw SQL query
       const query = `
-        SELECT 
-          project.id AS project_id, 
-          project.title AS project_title,
-          organisation_project.id AS org_project_id,
-          organisation.id AS org_id, 
-          organisation.name AS org_name, 
-          SUM(organisation_project.count) AS total_count 
-        FROM 
-          project 
-        LEFT JOIN organisation_project 
-          ON project.id = organisation_project.project_id 
-        LEFT JOIN organisation 
-          ON organisation_project.organisation_id = organisation.id 
-        WHERE 
-          organisation.id IN (${orgIds.map((orgId) => `'${orgId}'`).join(",")}) 
-          AND organisation_project.vouch = ${vouchValue}
-        GROUP BY 
-          project.id, 
-          organisation_project.id, 
-          organisation.id 
-        ORDER BY 
-          SUM(organisation_project.count) DESC`;
+    SELECT 
+      ${fields}, 
+      SUM(organisation_project.count) AS total_count 
+    FROM 
+      project 
+    LEFT JOIN organisation_project 
+      ON project.id = organisation_project.project_id 
+    LEFT JOIN organisation 
+      ON organisation_project.organisation_id = organisation.id 
+    WHERE 
+      organisation.id IN (${orgIds.map((orgId) => `'${orgId}'`).join(",")}) 
+      AND organisation_project.vouch = ${vouchValue}
+    GROUP BY 
+      project.id, 
+      organisation_project.id, 
+      organisation.id 
+    ORDER BY 
+      SUM(organisation_project.count) DESC;
+  `;
 
       // Execute the query and pass in the organization IDs and vouchValue as parameters
       const rawProjects = await manager.query(query);
