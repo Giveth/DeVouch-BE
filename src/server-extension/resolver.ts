@@ -20,9 +20,8 @@ export class ProjectResolver {
 
       const vouchValue = sortBy === "vouch" ? true : false;
 
-      console.log("orgIds", orgIds);
-
       const selectedFields = getSelectedFields(info);
+      console.log("selectedFields", selectedFields);
       const fields = selectedFields.join(", ");
 
       const query = `
@@ -48,20 +47,7 @@ export class ProjectResolver {
 
       const rawProjects = await manager.query(query);
 
-      return rawProjects.map((row: any) => ({
-        id: row.project_id,
-        title: row.project_title ?? "Untitled Project",
-        attestedOrganisations: [
-          {
-            vouch: vouchValue,
-            count: row.total_count,
-            organisation: {
-              id: row.org_id,
-              name: row.org_name,
-            },
-          },
-        ],
-      }));
+      return rawProjects;
     } catch (error) {
       console.error("Error fetching and sorting projects:", error);
       throw new Error("Failed to fetch and sort projects");
