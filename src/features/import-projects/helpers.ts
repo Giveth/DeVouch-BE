@@ -5,6 +5,23 @@ import { DESCRIPTION_SUMMARY_LENGTH } from "../../constants";
 import { convert } from "html-to-text";
 import { SourceConfig } from "./types";
 
+const areTimestampsEqual = (
+  timestamp1: Date | null | undefined,
+  timestamp2: Date | null | undefined
+) => {
+  if (!timestamp1 || !timestamp2) {
+    return timestamp1 == timestamp2; // Handles the case where one or both are null/undefined
+  }
+  return new Date(timestamp1).getTime() === new Date(timestamp2).getTime();
+};
+
+const areValuesEqual = (
+  value1: string | null | undefined,
+  value2: string | null | undefined
+) => {
+  return value1 == value2; // Handles null, undefined, and string comparisons
+};
+
 export const updateOrCreateProject = async (
   project: any,
   sourceConfig: SourceConfig
@@ -55,16 +72,32 @@ export const updateOrCreateProject = async (
   const descriptionSummary = getHtmlTextSummary(descriptionHtml || description);
 
   if (existingProject) {
-    // Update existing project
-    const isUpdated =
-      existingProject.title !== title ||
-      existingProject.description !== description ||
-      existingProject.url !== url ||
-      existingProject.image !== image ||
-      (rfRound && !existingProject.rfRounds?.some((rfr) => rfr === rfRound)) ||
-      existingProject.descriptionHtml != descriptionHtml ||
-      (!existingProject.descriptionSummary && description) ||
-      existingProject.sourceCreatedAt != sourceCreatedAt;
+    const changes: string[] = [];
+
+    // Check for specific field changes and log them
+    if (existingProject.title !== title)
+      changes.push(`title: "${existingProject.title}" -> "${title}"`);
+    if (existingProject.description !== description)
+      changes.push(
+        `description: "${existingProject.description}" -> "${description}"`
+      );
+    if (existingProject.url !== url)
+      changes.push(`url: "${existingProject.url}" -> "${url}"`);
+    if (existingProject.image !== image)
+      changes.push(`image: "${existingProject.image}" -> "${image}"`);
+    if (!areValuesEqual(existingProject.descriptionHtml, descriptionHtml))
+      changes.push(`descriptionHtml changed`);
+    if (!existingProject.descriptionSummary && description)
+      changes.push(`descriptionSummary set`);
+    if (!areTimestampsEqual(existingProject.sourceCreatedAt, sourceCreatedAt))
+      changes.push(
+        `sourceCreatedAt: "${existingProject.sourceCreatedAt}" -> "${sourceCreatedAt}"`
+      );
+    if (rfRound && !existingProject.rfRounds?.some((rfr) => rfr === rfRound)) {
+      changes.push(`rfRound added: "${rfRound}"`);
+    }
+
+    const isUpdated = changes.length > 0;
 
     if (isUpdated) {
       // Add the current round to rfRounds if not already present
@@ -72,6 +105,7 @@ export const updateOrCreateProject = async (
       if (rfRound) {
         rfRoundsSet.add(rfRound);
       }
+
       const updatedProject = {
         ...existingProject,
         title,
@@ -95,7 +129,7 @@ export const updateOrCreateProject = async (
           .execute();
 
         console.log(
-          `[${new Date().toISOString()}] - INFO: Project Updated. Project ID: ${id}`
+          `[${new Date().toISOString()}] - INFO: Project Updated. Project ID: ${id}. Changes: ${changes.join(", ")}`
         );
       } catch (error: any) {
         console.log(
