@@ -1,8 +1,7 @@
+import "reflect-metadata";
 import { Arg, Query, Resolver } from "type-graphql";
 import type { EntityManager } from "typeorm";
-import { Project } from "../model";
 import { ProjectType } from "./types"; // Custom ProjectType
-import "reflect-metadata";
 
 @Resolver()
 export class ProjectResolver {
@@ -19,39 +18,50 @@ export class ProjectResolver {
       // Determine whether we are sorting by vouches (true) or flags (false)
       const vouchValue = sortBy === "vouch" ? true : false;
 
-      // Query the projects vouched or flagged by the provided organizations
-      const projects = await manager
-        .getRepository(Project)
-        .createQueryBuilder("project")
-        .leftJoinAndSelect(
-          "project.attestedOrganisations",
-          "organisationProject"
-        )
-        .leftJoinAndSelect("organisationProject.organisation", "organisation")
-        .where("organisation.id IN (:...orgIds)", { orgIds }) // Filter by array of organization IDs
-        .andWhere("organisationProject.vouch = :vouchValue", { vouchValue }) // Filter by vouch or flag
-        .groupBy("project.id") // Group by project ID to accumulate counts
-        .addGroupBy("project.title") // Group by project title as well
-        .addGroupBy("organisationProject.id") // Group by organisationProject ID
-        .addGroupBy("organisation.id") // Group by organisation ID
-        .addGroupBy("organisation.name") // Group by organisation name
-        .orderBy("SUM(organisationProject.count)", "DESC") // Order by the sum of counts
-        .getMany();
+      console.log("orgIds", orgIds);
 
-      // Map the results to ProjectType
-      return projects.map((project) => ({
-        id: project.id,
-        title: project.title ?? "Untitled Project", // Handle null titles
-        attestedOrganisations: project.attestedOrganisations.map(
-          (orgProject) => ({
-            vouch: orgProject.vouch,
-            count: orgProject.count,
+      // Create raw SQL query
+      const query = `
+        SELECT 
+          project.id AS project_id, 
+          project.title AS project_title,
+          organisation_project.id AS org_project_id,
+          organisation.id AS org_id, 
+          organisation.name AS org_name, 
+          SUM(organisation_project.count) AS total_count 
+        FROM 
+          project 
+        LEFT JOIN organisation_project 
+          ON project.id = organisation_project.project_id 
+        LEFT JOIN organisation 
+          ON organisation_project.organisation_id = organisation.id 
+        WHERE 
+          organisation.id IN (${orgIds.map((orgId) => `'${orgId}'`).join(",")}) 
+          AND organisation_project.vouch = ${vouchValue}
+        GROUP BY 
+          project.id, 
+          organisation_project.id, 
+          organisation.id 
+        ORDER BY 
+          SUM(organisation_project.count) DESC`;
+
+      // Execute the query and pass in the organization IDs and vouchValue as parameters
+      const rawProjects = await manager.query(query);
+
+      // Map raw SQL result into ProjectType
+      return rawProjects.map((row: any) => ({
+        id: row.project_id,
+        title: row.project_title ?? "Untitled Project", // Handle null titles
+        attestedOrganisations: [
+          {
+            vouch: vouchValue,
+            count: row.total_count,
             organisation: {
-              id: orgProject.organisation.id,
-              name: orgProject.organisation.name,
+              id: row.org_id,
+              name: row.org_name,
             },
-          })
-        ),
+          },
+        ],
       }));
     } catch (error) {
       console.error("Error fetching and sorting projects:", error);
