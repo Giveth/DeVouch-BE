@@ -23,7 +23,6 @@ export class ProjectResolver {
       const vouchValue = sortBy === "vouch" ? true : false;
 
       const selectedFields = getSelectedFields(info);
-      console.log("selectedFields", selectedFields);
       const fields = selectedFields.join(", ");
 
       const query = `
