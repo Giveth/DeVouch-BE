@@ -18,12 +18,12 @@ export const fetchAndProcessRlProjects = async (
         rfRound: round,
       };
 
-      if (shouldHandlePrelimResult)
-        await updateOrCreateProject(processedProject, rlSourceConfig);
+      await updateOrCreateProject(processedProject, rlSourceConfig);
     }
 
     // After processing all new projects, handle projects not in the new dataset for the current round
-    await manageProjectRemovals(data, rlSourceConfig, round);
+    if (shouldHandlePrelimResult)
+      await manageProjectRemovals(data, rlSourceConfig, round);
   } catch (error: any) {
     console.log("error on fetchAndProcessRlProjects", error.message);
   }
