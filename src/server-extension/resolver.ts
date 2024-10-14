@@ -13,6 +13,8 @@ export class ProjectResolver {
   async getProjectsSortedByVouchOrFlag(
     @Arg("orgIds", () => [String]) orgIds: string[],
     @Arg("sortBy", () => String) sortBy: "vouch" | "flag",
+    @Arg("limit", () => Number, { nullable: true }) limit: number = 10,
+    @Arg("offset", () => Number, { nullable: true }) offset: number = 0,
     @Info() info: GraphQLResolveInfo
   ): Promise<ProjectType[]> {
     try {
@@ -25,24 +27,25 @@ export class ProjectResolver {
       const fields = selectedFields.join(", ");
 
       const query = `
-    SELECT 
-      ${fields}, 
-      SUM(organisation_project.count) AS total_count 
-    FROM 
-      project 
-    LEFT JOIN organisation_project 
-      ON project.id = organisation_project.project_id 
-    LEFT JOIN organisation 
-      ON organisation_project.organisation_id = organisation.id 
-    WHERE 
-      organisation.id IN (${orgIds.map((orgId) => `'${orgId}'`).join(",")}) 
-      AND organisation_project.vouch = ${vouchValue}
-    GROUP BY 
-      project.id, 
-      organisation_project.id, 
-      organisation.id 
-    ORDER BY 
-      SUM(organisation_project.count) DESC;
+        SELECT 
+          ${fields}, 
+          SUM(organisation_project.count) AS total_count 
+        FROM 
+          project 
+        LEFT JOIN organisation_project 
+          ON project.id = organisation_project.project_id 
+        LEFT JOIN organisation 
+          ON organisation_project.organisation_id = organisation.id 
+        WHERE 
+          organisation.id IN (${orgIds.map((orgId) => `'${orgId}'`).join(",")}) 
+          AND organisation_project.vouch = ${vouchValue}
+        GROUP BY 
+          project.id, 
+          organisation_project.id, 
+          organisation.id 
+        ORDER BY 
+          SUM(organisation_project.count) DESC
+          LIMIT ${limit} OFFSET ${offset};
   `;
 
       const rawProjects = await manager.query(query);
