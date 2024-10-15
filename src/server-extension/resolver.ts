@@ -2,29 +2,8 @@ import "reflect-metadata";
 import { GraphQLResolveInfo } from "graphql";
 import { Arg, Info, Query, Resolver } from "type-graphql";
 import type { EntityManager } from "typeorm";
-import { ProjectsSortedByVouchOrFlagType } from "./types"; // Custom ProjectType
-
-enum EProjectSort {
-  HIGHEST_VOUCH_COUNT = "totalVouches_DESC",
-  LOWEST_VOUCH_COUNT = "totalVouches_ASC",
-  HIGHEST_FLAG = "totalFlags_DESC",
-  LOWEST_FLAG = "totalFlags_ASC",
-}
-
-const getSortBy = (sortBy: EProjectSort) => {
-  switch (sortBy) {
-    case EProjectSort.HIGHEST_VOUCH_COUNT:
-      return { sortBy: "vouch", order: "DESC" };
-    case EProjectSort.LOWEST_VOUCH_COUNT:
-      return { sortBy: "vouch", order: "ASC" };
-    case EProjectSort.HIGHEST_FLAG:
-      return { sortBy: "flag", order: "DESC" };
-    case EProjectSort.LOWEST_FLAG:
-      return { sortBy: "flag", order: "ASC" };
-    default:
-      return { sortBy: "vouch", order: "DESC" };
-  }
-};
+import { EProjectSort, ProjectsSortedByVouchOrFlagType } from "./types"; // Custom ProjectType
+import { getProjectSortBy } from "./helper";
 
 @Resolver()
 export class ProjectResolver {
@@ -41,7 +20,7 @@ export class ProjectResolver {
     try {
       const manager = await this.tx();
 
-      const sortInfo = getSortBy(sortBy);
+      const sortInfo = getProjectSortBy(sortBy);
 
       const vouchValue = sortInfo.sortBy === "vouch";
 
