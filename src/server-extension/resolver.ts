@@ -3,7 +3,6 @@ import { GraphQLResolveInfo } from "graphql";
 import { Arg, Info, Query, Resolver } from "type-graphql";
 import type { EntityManager } from "typeorm";
 import { ProjectType } from "./types"; // Custom ProjectType
-import { getSelectedFields } from "./helper";
 
 @Resolver()
 export class ProjectResolver {
@@ -20,14 +19,11 @@ export class ProjectResolver {
     try {
       const manager = await this.tx();
 
-      const vouchValue = sortBy === "vouch" ? true : false;
-
-      const selectedFields = getSelectedFields(info);
-      const fields = selectedFields.join(", ");
+      const vouchValue = sortBy === "vouch";
 
       const query = `
         SELECT 
-          ${fields}, 
+          project.id, 
           SUM(organisation_project.count) AS total_count 
         FROM 
           project 
