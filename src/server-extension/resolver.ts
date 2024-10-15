@@ -32,16 +32,21 @@ export class ProjectResolver {
         LEFT JOIN organisation 
           ON organisation_project.organisation_id = organisation.id 
         WHERE 
-          organisation.id IN (${orgIds.map((orgId) => `'${orgId}'`).join(",")}) 
-          AND organisation_project.vouch = ${vouchValue}
+          organisation.id = ANY($1)
+          AND organisation_project.vouch = $2
         GROUP BY 
           project.id
         ORDER BY 
           SUM(organisation_project.count) DESC
-          LIMIT ${limit} OFFSET ${offset};
-  `;
+        LIMIT $3 OFFSET $4;
+      `;
 
-      const rawProjects = await manager.query(query);
+      const rawProjects = await manager.query(query, [
+        orgIds,
+        vouchValue,
+        limit,
+        offset,
+      ]);
 
       return rawProjects;
     } catch (error) {
