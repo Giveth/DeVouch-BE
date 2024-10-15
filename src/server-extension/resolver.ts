@@ -5,10 +5,10 @@ import type { EntityManager } from "typeorm";
 import { ProjectsSortedByVouchOrFlagType } from "./types"; // Custom ProjectType
 
 enum EProjectSort {
-  HIGHEST_VOUCH_COUNT,
-  LOWEST_VOUCH_COUNT,
-  HIGHEST_FLAG,
-  LOWEST_FLAG,
+  HIGHEST_VOUCH_COUNT = "totalVouches_DESC",
+  LOWEST_VOUCH_COUNT = "totalVouches_ASC",
+  HIGHEST_FLAG = "totalFlags_DESC",
+  LOWEST_FLAG = "totalFlags_ASC",
 }
 
 const getSortBy = (sortBy: EProjectSort) => {
