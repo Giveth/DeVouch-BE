@@ -35,9 +35,7 @@ export class ProjectResolver {
           organisation.id IN (${orgIds.map((orgId) => `'${orgId}'`).join(",")}) 
           AND organisation_project.vouch = ${vouchValue}
         GROUP BY 
-          project.id, 
-          organisation_project.id, 
-          organisation.id 
+          project.id
         ORDER BY 
           SUM(organisation_project.count) DESC
           LIMIT ${limit} OFFSET ${offset};
