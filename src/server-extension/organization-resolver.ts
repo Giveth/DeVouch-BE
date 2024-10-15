@@ -1,8 +1,7 @@
 import "reflect-metadata";
 import { Arg, Query, Resolver } from "type-graphql";
 import type { EntityManager } from "typeorm";
-import { VouchCountPerMonth, VouchCountResult } from "./types";
-
+import { VouchCountResult, VouchCountPerMonth } from "./types";
 @Resolver()
 export class OrganisationResolver {
   constructor(private tx: () => Promise<EntityManager>) {}
@@ -16,16 +15,18 @@ export class OrganisationResolver {
     try {
       const manager = await this.tx();
 
-      // Query to get total vouches within the date range
+      // Query to get total vouches within the date range (using ProjectAttestation now)
       const queryTotal = `
         SELECT 
-          SUM(organisation_project.count) AS total
+          SUM(CASE WHEN project_attestation.vouch = true THEN 1 ELSE 0 END) AS total
         FROM 
-          organisation_project
+          project_attestation
+        LEFT JOIN attestor_organisation 
+          ON project_attestation.attestor_organisation_id = attestor_organisation.id
         WHERE 
-          organisation_project.organisation_id = $1
-          AND organisation_project.vouch = true
-          AND organisation_project.attestTimestamp BETWEEN $2 AND $3;
+          attestor_organisation.organisation_id = $1
+          AND project_attestation.vouch = true
+          AND project_attestation.attest_timestamp BETWEEN $2 AND $3;
       `;
 
       const resultTotal = await manager.query(queryTotal, [
@@ -36,19 +37,21 @@ export class OrganisationResolver {
 
       const total = resultTotal[0]?.total || 0;
 
-      // Query to get vouches per month within the date range
+      // Query to get vouches per month within the date range (using ProjectAttestation)
       const queryPerMonth = `
         SELECT 
-          to_char(organisation_project.attestTimestamp, 'YYYY-MM') AS month, 
-          SUM(organisation_project.count) AS count
+          to_char(project_attestation.attest_timestamp, 'YYYY-MM') AS month, 
+          COUNT(*) AS count
         FROM 
-          organisation_project
+          project_attestation
+        LEFT JOIN attestor_organisation 
+          ON project_attestation.attestor_organisation_id = attestor_organisation.id
         WHERE 
-          organisation_project.organisation_id = $1
-          AND organisation_project.vouch = true
-          AND organisation_project.attestTimestamp BETWEEN $2 AND $3
+          attestor_organisation.organisation_id = $1
+          AND project_attestation.vouch = true
+          AND project_attestation.attest_timestamp BETWEEN $2 AND $3
         GROUP BY 
-          to_char(organisation_project.attestTimestamp, 'YYYY-MM')
+          to_char(project_attestation.attest_timestamp, 'YYYY-MM')
         ORDER BY 
           month;
       `;
