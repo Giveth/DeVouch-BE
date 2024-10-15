@@ -1,1 +1,1 @@
-export { ProjectResolver } from "../resolver";
+export { ProjectResolver } from "../project-resolver";
