@@ -2,20 +2,20 @@ import "reflect-metadata";
 import { GraphQLResolveInfo } from "graphql";
 import { Arg, Info, Query, Resolver } from "type-graphql";
 import type { EntityManager } from "typeorm";
-import { ProjectType } from "./types"; // Custom ProjectType
+import { ProjectsSortedByVouchOrFlagType } from "./types"; // Custom ProjectType
 
 @Resolver()
 export class ProjectResolver {
   constructor(private tx: () => Promise<EntityManager>) {}
 
-  @Query(() => [ProjectType])
+  @Query(() => [ProjectsSortedByVouchOrFlagType])
   async getProjectsSortedByVouchOrFlag(
     @Arg("orgIds", () => [String]) orgIds: string[],
     @Arg("sortBy", () => String) sortBy: "vouch" | "flag",
     @Arg("limit", () => Number, { nullable: true }) limit: number = 10,
     @Arg("offset", () => Number, { nullable: true }) offset: number = 0,
     @Info() info: GraphQLResolveInfo
-  ): Promise<ProjectType[]> {
+  ): Promise<ProjectsSortedByVouchOrFlagType[]> {
     try {
       const manager = await this.tx();
 
