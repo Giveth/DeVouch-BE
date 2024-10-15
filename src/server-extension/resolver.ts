@@ -4,6 +4,28 @@ import { Arg, Info, Query, Resolver } from "type-graphql";
 import type { EntityManager } from "typeorm";
 import { ProjectsSortedByVouchOrFlagType } from "./types"; // Custom ProjectType
 
+enum EProjectSort {
+  HIGHEST_VOUCH_COUNT,
+  LOWEST_VOUCH_COUNT,
+  HIGHEST_FLAG,
+  LOWEST_FLAG,
+}
+
+const getSortBy = (sortBy: EProjectSort) => {
+  switch (sortBy) {
+    case EProjectSort.HIGHEST_VOUCH_COUNT:
+      return { sortBy: "vouch", order: "DESC" };
+    case EProjectSort.LOWEST_VOUCH_COUNT:
+      return { sortBy: "vouch", order: "ASC" };
+    case EProjectSort.HIGHEST_FLAG:
+      return { sortBy: "flag", order: "DESC" };
+    case EProjectSort.LOWEST_FLAG:
+      return { sortBy: "flag", order: "ASC" };
+    default:
+      return { sortBy: "vouch", order: "DESC" };
+  }
+};
+
 @Resolver()
 export class ProjectResolver {
   constructor(private tx: () => Promise<EntityManager>) {}
@@ -11,7 +33,7 @@ export class ProjectResolver {
   @Query(() => [ProjectsSortedByVouchOrFlagType])
   async getProjectsSortedByVouchOrFlag(
     @Arg("orgIds", () => [String]) orgIds: string[],
-    @Arg("sortBy", () => String) sortBy: "vouch" | "flag",
+    @Arg("sortBy", () => String) sortBy: EProjectSort,
     @Arg("limit", () => Number, { nullable: true }) limit: number = 10,
     @Arg("offset", () => Number, { nullable: true }) offset: number = 0,
     @Info() info: GraphQLResolveInfo
@@ -19,7 +41,9 @@ export class ProjectResolver {
     try {
       const manager = await this.tx();
 
-      const vouchValue = sortBy === "vouch";
+      const sortInfo = getSortBy(sortBy);
+
+      const vouchValue = sortInfo.sortBy === "vouch";
 
       const query = `
         SELECT 
@@ -37,7 +61,7 @@ export class ProjectResolver {
         GROUP BY 
           project.id
         ORDER BY 
-          SUM(organisation_project.count) DESC
+          SUM(organisation_project.count) ${sortInfo.order}
         LIMIT $3 OFFSET $4;
       `;
 
