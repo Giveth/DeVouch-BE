@@ -21,8 +21,7 @@ export class OrganisationResolver {
         SELECT 
           to_char(project_attestation.attest_timestamp, 'YYYY-MM') AS date, 
           COUNT(*) AS total_count,
-          SUM(CASE WHEN project_attestation.comment IS NOT NULL THEN 1 ELSE 0 END) AS count_with_comments,
-          SUM(CASE WHEN project_attestation.comment IS NULL THEN 1 ELSE 0 END) AS count_without_comments
+          SUM(CASE WHEN project_attestation.comment IS NOT NULL AND project_attestation.comment != '' THEN 1 ELSE 0 END) AS count_with_comments
         FROM 
           project_attestation
         LEFT JOIN attestor_organisation 
@@ -37,20 +36,18 @@ export class OrganisationResolver {
           date;
       `;
 
-      // Execute the query with the passed variables
       const resultPerMonth = await manager.query(queryPerMonth, [
         organisationId,
         fromDate,
         toDate,
       ]);
 
-      // Map the results to the VouchCountPerMonth interface
       const totalPerMonth: VouchCountPerMonth[] = resultPerMonth.map(
         (row: any) => ({
           date: row.date,
           totalCount: row.total_count,
           countWithComments: row.count_with_comments,
-          countWithoutComments: row.count_without_comments,
+          countWithoutComments: row.total_count - row.count_with_comments, // Derived field
         })
       );
 
