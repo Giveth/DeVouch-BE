@@ -24,8 +24,14 @@ export class VouchCountResult {
 @ObjectType()
 export class VouchCountPerMonth {
   @Field()
-  month: string = "";
+  date: string = "";
 
   @Field()
-  count: number = 0;
+  totalCount: number = 0;
+
+  @Field()
+  countWithComments: number = 0;
+
+  @Field()
+  countWithoutComments: number = 0;
 }
