@@ -2,6 +2,7 @@ import "reflect-metadata";
 import { Arg, Query, Resolver } from "type-graphql";
 import type { EntityManager } from "typeorm";
 import { VouchCountResult, VouchCountPerMonth } from "./types";
+
 @Resolver()
 export class OrganisationResolver {
   constructor(private tx: () => Promise<EntityManager>) {}
@@ -15,10 +16,10 @@ export class OrganisationResolver {
     try {
       const manager = await this.tx();
 
-      // Query to get total vouches within the date range (using ProjectAttestation now)
+      // Query to get total vouches within the date range
       const queryTotal = `
         SELECT 
-          SUM(CASE WHEN project_attestation.vouch = true THEN 1 ELSE 0 END) AS total
+          COUNT(*) AS total
         FROM 
           project_attestation
         LEFT JOIN attestor_organisation 
@@ -37,10 +38,10 @@ export class OrganisationResolver {
 
       const total = resultTotal[0]?.total || 0;
 
-      // Query to get vouches per month within the date range (using ProjectAttestation)
+      // Query to get vouches per month within the date range
       const queryPerMonth = `
         SELECT 
-          to_char(project_attestation.attest_timestamp, 'YYYY-MM') AS month, 
+          to_char(project_attestation.attest_timestamp, 'YYYY-MM') AS date, 
           COUNT(*) AS count
         FROM 
           project_attestation
@@ -53,7 +54,7 @@ export class OrganisationResolver {
         GROUP BY 
           to_char(project_attestation.attest_timestamp, 'YYYY-MM')
         ORDER BY 
-          month;
+          date;
       `;
 
       const resultPerMonth = await manager.query(queryPerMonth, [
@@ -64,7 +65,7 @@ export class OrganisationResolver {
 
       const totalPerMonth: VouchCountPerMonth[] = resultPerMonth.map(
         (row: any) => ({
-          month: row.month,
+          date: row.date,
           count: row.count,
         })
       );
