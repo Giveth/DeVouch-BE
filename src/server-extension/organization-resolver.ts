@@ -2,6 +2,7 @@ import "reflect-metadata";
 import { Arg, Query, Resolver } from "type-graphql";
 import type { EntityManager } from "typeorm";
 import { VouchCountPerMonth, VouchCountResult } from "./types";
+import { isValidDate } from "./helper";
 
 @Resolver()
 export class OrganisationResolver {
@@ -13,10 +14,20 @@ export class OrganisationResolver {
     @Arg("fromDate", () => String) fromDate: string,
     @Arg("toDate", () => String) toDate: string
   ): Promise<VouchCountResult> {
+    if (!isValidDate(fromDate) || !isValidDate(toDate)) {
+      throw new Error(
+        "Invalid date format. Dates must be in YYYY-MM-DD format."
+      );
+    }
+
+    const from = new Date(fromDate);
+    const to = new Date(toDate);
+    if (from > to) {
+      throw new Error("`fromDate` cannot be later than `toDate`.");
+    }
     try {
       const manager = await this.tx();
 
-      // Updated query to get total vouches, with comments and without comments, per month
       const queryPerMonth = `
         SELECT 
           to_char(project_attestation.attest_timestamp, 'YYYY-MM') AS date, 
@@ -47,18 +58,17 @@ export class OrganisationResolver {
           date: row.date,
           totalCount: row.total_count,
           countWithComments: row.count_with_comments,
-          countWithoutComments: row.total_count - row.count_with_comments, // Derived field
+          countWithoutComments: row.total_count - row.count_with_comments,
         })
       );
 
-      // Return the result with totals and per month data
       return {
-        total: totalPerMonth.reduce((acc, row) => acc + row.totalCount, 0), // Sum total counts
+        total: totalPerMonth.reduce((acc, row) => acc + row.totalCount, 0),
         totalPerMonth,
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching vouch count by date:", error);
-      throw new Error("Failed to fetch vouch count by date");
+      throw new Error(`Failed to fetch vouch count by date: ${error.message}`);
     }
   }
 }
