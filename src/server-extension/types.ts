@@ -11,3 +11,27 @@ export class ProjectsSortedByVouchOrFlagType {
   @Field(() => ID)
   id!: string;
 }
+
+@ObjectType()
+export class VouchCountResult {
+  @Field()
+  total: number = 0;
+
+  @Field(() => [VouchCountPerMonth])
+  totalPerMonth: VouchCountPerMonth[] = [];
+}
+
+@ObjectType()
+export class VouchCountPerMonth {
+  @Field()
+  date: string = "";
+
+  @Field()
+  totalCount: number = 0;
+
+  @Field()
+  countWithComments: number = 0;
+
+  @Field()
+  countWithoutComments: number = 0;
+}
