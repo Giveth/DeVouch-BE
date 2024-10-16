@@ -16,6 +16,9 @@ export const getProjectSortBy = (sortBy: EProjectSort) => {
 };
 
 export function isValidDate(dateStr: string): boolean {
+  if (typeof dateStr !== "string" || dateStr.trim() === "") {
+    return false;
+  }
   const date = new Date(dateStr);
-  return !isNaN(date.getTime()); // Check if the date is valid
+  return !Number.isNaN(date.getTime());
 }
