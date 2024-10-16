@@ -1,4 +1,3 @@
-import "reflect-metadata";
 import { Arg, Query, Resolver } from "type-graphql";
 import type { EntityManager } from "typeorm";
 import { VouchCountPerMonth, VouchCountResult } from "./types";
@@ -14,6 +13,7 @@ export class OrganisationResolver {
     @Arg("fromDate", () => String) fromDate: string,
     @Arg("toDate", () => String) toDate: string
   ): Promise<VouchCountResult> {
+    // Validate the dates
     if (!isValidDate(fromDate) || !isValidDate(toDate)) {
       throw new Error(
         "Invalid date format. Dates must be in YYYY-MM-DD format."
@@ -25,6 +25,7 @@ export class OrganisationResolver {
     if (from > to) {
       throw new Error("`fromDate` cannot be later than `toDate`.");
     }
+
     try {
       const manager = await this.tx();
 
@@ -56,14 +57,18 @@ export class OrganisationResolver {
       const totalPerMonth: VouchCountPerMonth[] = resultPerMonth.map(
         (row: any) => ({
           date: row.date,
-          totalCount: row.total_count,
-          countWithComments: row.count_with_comments,
-          countWithoutComments: row.total_count - row.count_with_comments,
+          totalCount: Number(row.total_count),
+          countWithComments: Number(row.count_with_comments),
+          countWithoutComments:
+            Number(row.total_count) - Number(row.count_with_comments),
         })
       );
 
       return {
-        total: totalPerMonth.reduce((acc, row) => acc + row.totalCount, 0),
+        total: totalPerMonth.reduce(
+          (acc, row) => acc + Number(row.totalCount),
+          0
+        ),
         totalPerMonth,
       };
     } catch (error: any) {
