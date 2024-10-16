@@ -54,21 +54,29 @@ export class OrganisationResolver {
         toDate,
       ]);
 
+      let total = 0;
+      let totalWithComments = 0;
       const totalPerMonth: VouchCountPerMonth[] = resultPerMonth.map(
-        (row: any) => ({
-          date: row.date,
-          totalCount: Number(row.total_count),
-          countWithComments: Number(row.count_with_comments),
-          countWithoutComments:
-            Number(row.total_count) - Number(row.count_with_comments),
-        })
+        (row: any) => {
+          const totalCount = Number(row.total_count);
+          const countWithComments = Number(row.count_with_comments);
+          const countWithoutComments = totalCount - countWithComments;
+
+          total += totalCount;
+          totalWithComments += countWithComments;
+
+          return {
+            date: row.date,
+            totalCount,
+            countWithComments,
+            countWithoutComments,
+          };
+        }
       );
 
       return {
-        total: totalPerMonth.reduce(
-          (acc, row) => acc + Number(row.totalCount),
-          0
-        ),
+        total,
+        totalWithComments,
         totalPerMonth,
       };
     } catch (error: any) {
