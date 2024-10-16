@@ -4,4 +4,5 @@ export type GivethProjectInfo = {
   description: string;
   slug: string;
   image: string;
+  creationDate: string;
 };

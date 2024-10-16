@@ -12,4 +12,5 @@ export const givethSourceConfig: SourceConfig = {
   descriptionField: "description",
   urlField: "url",
   imageField: "image",
+  sourceCreatedAtField: "creationDate",
 };
