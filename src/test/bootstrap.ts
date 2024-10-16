@@ -1,4 +1,3 @@
-import { lookupArchive } from "@subsquid/archive-registry";
 import {
   BlockHeader,
   DataHandlerContext,
@@ -16,7 +15,7 @@ dotenv.config({
 export const processor = new EvmBatchProcessor()
   // Lookup archive by the network name in Subsquid registry
   // See https://docs.subsquid.io/evm-indexing/supported-networks/
-  .setGateway(lookupArchive("eth-sepolia"))
+  .setGateway("https://v2.archive.subsquid.io/network/ethereum-sepolia")
   .addLog({});
 
 export type Fields = EvmBatchProcessorFields<typeof processor>;
