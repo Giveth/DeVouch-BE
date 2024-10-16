@@ -17,6 +17,9 @@ export class VouchCountResult {
   @Field()
   total: number = 0;
 
+  @Field()
+  totalWithComments: number = 0;
+
   @Field(() => [VouchCountPerMonth])
   totalPerMonth: VouchCountPerMonth[] = [];
 }
