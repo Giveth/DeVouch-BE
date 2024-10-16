@@ -14,3 +14,8 @@ export const getProjectSortBy = (sortBy: EProjectSort) => {
       return { sortBy: "vouch", order: "DESC" };
   }
 };
+
+export function isValidDate(dateStr: string): boolean {
+  const date = new Date(dateStr);
+  return !isNaN(date.getTime()); // Check if the date is valid
+}
