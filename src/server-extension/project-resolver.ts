@@ -1,6 +1,6 @@
 import "reflect-metadata";
 import { GraphQLResolveInfo } from "graphql";
-import { Arg, Info, Query, Resolver } from "type-graphql";
+import { Arg, Info, Int, Query, Resolver } from "type-graphql";
 import type { EntityManager } from "typeorm";
 import { EProjectSort, ProjectsSortedByVouchOrFlagType } from "./types";
 import { getProjectSortBy } from "./helper";
@@ -16,8 +16,8 @@ export class ProjectResolver {
     @Arg("sources", () => [String], { nullable: true }) sources?: string[],
     @Arg("sortBy", () => String, { nullable: true })
     sortBy: EProjectSort = EProjectSort.HIGHEST_VOUCH_COUNT,
-    @Arg("limit", () => Number, { nullable: true }) limit: number = 10,
-    @Arg("offset", () => Number, { nullable: true }) offset: number = 0
+    @Arg("limit", () => Int, { nullable: true }) limit: number = 10,
+    @Arg("offset", () => Int, { nullable: true }) offset: number = 0
   ): Promise<ProjectsSortedByVouchOrFlagType[]> {
     try {
       const manager = await this.tx();
@@ -32,14 +32,14 @@ export class ProjectResolver {
 
       // Add organization filter if organizations are provided
       if (organizations && organizations.length > 0) {
-        conditions.push(`organisation.id = ANY($${paramIndex})`);
+        conditions.push(`organisation.id = ANY($${paramIndex}::text[])`);
         parameters.push(organizations);
         paramIndex++;
       }
 
       // Add source filter if sources are provided
       if (sources && sources.length > 0) {
-        conditions.push(`project.source = ANY($${paramIndex})`);
+        conditions.push(`project.source = ANY($${paramIndex}::text[])`);
         parameters.push(sources);
         paramIndex++;
       }
@@ -77,7 +77,7 @@ export class ProjectResolver {
         GROUP BY 
           project.id
         ORDER BY 
-          SUM(organisation_project.count) ${sortInfo.order}
+          SUM(organisation_project.count) ${sortInfo.order === "ASC" ? "ASC" : "DESC"}
         LIMIT $${limitParamIndex} OFFSET $${offsetParamIndex};
       `;
 
