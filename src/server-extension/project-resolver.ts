@@ -26,7 +26,7 @@ export class ProjectResolver {
       const vouchValue = sortInfo.sortBy === "vouch";
 
       // Initialize conditions and parameters for dynamic query construction
-      const conditions = [];
+      const conditions = ["project.imported = true"];
       const parameters = [];
       let paramIndex = 1;
 
