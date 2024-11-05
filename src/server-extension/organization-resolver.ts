@@ -116,7 +116,8 @@ export class OrganisationResolver {
       const query = `
         SELECT 
           attestor_organisation.attestor_id AS attestor_id,
-          COUNT(*) AS total_count
+          COUNT(*) AS total_count,
+          SUM(CASE WHEN project_attestation.comment IS NOT NULL AND project_attestation.comment != '' THEN 1 ELSE 0 END) AS count_with_comments
         FROM 
           project_attestation
         JOIN attestor_organisation 
@@ -139,18 +140,24 @@ export class OrganisationResolver {
       const result = await manager.query(query, params);
 
       let totalVouches = 0;
+      let totalWithComments = 0;
       const vouchCountByUser: VouchCountByUser[] = result.map((row: any) => {
         const totalCount = Number(row.total_count);
+        const countWithComments = Number(row.count_with_comments);
+
         totalVouches += totalCount;
+        totalWithComments += countWithComments;
 
         return {
           attestorId: row.attestor_id,
           totalCount,
+          countWithComments,
         };
       });
 
       return {
         totalVouches,
+        totalWithComments,
         vouchCountByUser,
       };
     } catch (error: any) {

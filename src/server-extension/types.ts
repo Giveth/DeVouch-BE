@@ -46,12 +46,18 @@ export class VouchCountByUser {
 
   @Field(() => Int)
   totalCount: number = 0;
+
+  @Field(() => Int)
+  countWithComments: number = 0;
 }
 
 @ObjectType()
 export class VouchCountByUserResult {
   @Field(() => Int)
   totalVouches: number = 0;
+
+  @Field(() => Int)
+  totalWithComments: number = 0;
 
   @Field(() => [VouchCountByUser])
   vouchCountByUser: VouchCountByUser[] = [];
