@@ -38,3 +38,21 @@ export class VouchCountPerMonth {
   @Field()
   countWithoutComments: number = 0;
 }
+
+@ObjectType()
+export class VouchCountByUser {
+  @Field()
+  userId: string = "";
+
+  @Field(() => Int)
+  totalCount: number = 0;
+}
+
+@ObjectType()
+export class VouchCountByUserResult {
+  @Field(() => Int)
+  totalUsers: number = 0;
+
+  @Field(() => [VouchCountByUser])
+  vouchCountByUser: VouchCountByUser[] = [];
+}
