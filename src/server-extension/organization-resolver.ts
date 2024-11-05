@@ -138,13 +138,19 @@ export class OrganisationResolver {
 
       const result = await manager.query(query, params);
 
-      const vouchCountByUser: VouchCountByUser[] = result.map((row: any) => ({
-        attestorId: row.attestor_id,
-        totalCount: Number(row.total_count),
-      }));
+      let totalVouches = 0;
+      const vouchCountByUser: VouchCountByUser[] = result.map((row: any) => {
+        const totalCount = Number(row.total_count);
+        totalVouches += totalCount;
+
+        return {
+          attestorId: row.attestor_id,
+          totalCount,
+        };
+      });
 
       return {
-        totalUsers: vouchCountByUser.length,
+        totalVouches,
         vouchCountByUser,
       };
     } catch (error: any) {

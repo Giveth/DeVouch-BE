@@ -42,7 +42,7 @@ export class VouchCountPerMonth {
 @ObjectType()
 export class VouchCountByUser {
   @Field()
-  userId: string = "";
+  attestorId: string = "";
 
   @Field(() => Int)
   totalCount: number = 0;
@@ -51,7 +51,7 @@ export class VouchCountByUser {
 @ObjectType()
 export class VouchCountByUserResult {
   @Field(() => Int)
-  totalUsers: number = 0;
+  totalVouches: number = 0;
 
   @Field(() => [VouchCountByUser])
   vouchCountByUser: VouchCountByUser[] = [];
