@@ -14,6 +14,7 @@ export class ProjectResolver {
     @Arg("organizations", () => [String], { nullable: true })
     organizations?: string[],
     @Arg("sources", () => [String], { nullable: true }) sources?: string[],
+    @Arg("rfRounds", () => [Int], { nullable: true }) rfRounds?: number[],
     @Arg("sortBy", () => String, { nullable: true })
     sortBy: EProjectSort = EProjectSort.HIGHEST_VOUCH_COUNT,
     @Arg("limit", () => Int, { nullable: true }) limit: number = 10,
@@ -44,6 +45,13 @@ export class ProjectResolver {
         paramIndex++;
       }
 
+      // Add rfRounds filter if rfRounds are provided
+      if (rfRounds && rfRounds.length > 0) {
+        conditions.push(`project.rf_rounds && $${paramIndex}::int[]`);
+        parameters.push(rfRounds);
+        paramIndex++;
+      }
+
       // Add vouch/flag condition
       conditions.push(`organisation_project.vouch = $${paramIndex}`);
       parameters.push(vouchValue);
@@ -65,7 +73,7 @@ export class ProjectResolver {
       // Construct the final query
       const query = `
         SELECT 
-          project.id, 
+          project.id,
           SUM(organisation_project.count) AS total_count 
         FROM 
           project 
