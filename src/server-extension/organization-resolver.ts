@@ -15,6 +15,7 @@ export class OrganisationResolver {
   @Query(() => VouchCountResult)
   async getOrganisationVouchCountByDate(
     @Arg("organisationId", () => String) organisationId: string,
+    @Arg("source", () => String) source: string,
     @Arg("fromDate", () => String) fromDate: string,
     @Arg("toDate", () => String) toDate: string
   ): Promise<VouchCountResult> {
@@ -41,12 +42,15 @@ export class OrganisationResolver {
           SUM(CASE WHEN project_attestation.comment IS NOT NULL AND project_attestation.comment != '' THEN 1 ELSE 0 END) AS count_with_comments
         FROM 
           project_attestation
-        LEFT JOIN attestor_organisation 
+        JOIN attestor_organisation 
           ON project_attestation.attestor_organisation_id = attestor_organisation.id
+        JOIN project 
+          ON project_attestation.project_id = project.id
         WHERE 
           attestor_organisation.organisation_id = $1
+          AND project.source = $2
           AND project_attestation.vouch = true
-          AND project_attestation.attest_timestamp BETWEEN $2 AND $3
+          AND project_attestation.attest_timestamp BETWEEN $3 AND $4
         GROUP BY 
           to_char(project_attestation.attest_timestamp, 'YYYY-MM')
         ORDER BY 
@@ -55,6 +59,7 @@ export class OrganisationResolver {
 
       const resultPerMonth = await manager.query(queryPerMonth, [
         organisationId,
+        source,
         fromDate,
         toDate,
       ]);
