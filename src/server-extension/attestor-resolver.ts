@@ -26,8 +26,8 @@ export class AttestorResolver {
         totalCount: rawProjects[0].total_unique_attesters,
       };
     } catch (error) {
-      console.error("Error fetching and sorting projects:", error);
-      throw new Error("Failed to fetch and sort projects");
+      console.error("Error counting attestors:", error);
+      throw new Error("Failed to count attestors");
     }
   }
 }
