@@ -1,6 +1,5 @@
 import "reflect-metadata";
-import { GraphQLResolveInfo } from "graphql";
-import { Arg, Info, Int, Query, Resolver } from "type-graphql";
+import { Arg, Int, Query, Resolver } from "type-graphql";
 import type { EntityManager } from "typeorm";
 import { EProjectSort, ProjectsSortedByVouchOrFlagType } from "./types";
 import { getProjectSortBy } from "./helper";
