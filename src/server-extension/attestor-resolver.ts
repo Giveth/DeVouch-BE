@@ -20,7 +20,10 @@ export class AttestorResolver {
 
       // Execute the query with parameters
       const rawProjects = await manager.query(query);
-      console.log("rawProjects", rawProjects);
+
+      if (!rawProjects?.[0]?.total_unique_attesters) {
+        return { totalCount: 0 };
+      }
 
       return {
         totalCount: rawProjects[0].total_unique_attesters,
