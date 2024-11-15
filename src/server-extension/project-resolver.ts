@@ -91,12 +91,16 @@ export class ProjectResolver {
 
       // Execute the query with parameters
       const rawProjects = await manager.query(query, parameters);
-      const res = rawProjects.map((rawProject: any) => ({
-        rfRounds: rawProject.rf_rounds,
-        ...rawProject,
-      }));
-
-      return res;
+      return rawProjects.map(
+        (rawProject: {
+          id: string;
+          rf_rounds: number[] | null;
+          total_count: number;
+        }) => ({
+          ...rawProject,
+          rfRounds: rawProject.rf_rounds,
+        })
+      );
     } catch (error) {
       console.error("Error fetching and sorting projects:", error);
       throw new Error("Failed to fetch and sort projects");
