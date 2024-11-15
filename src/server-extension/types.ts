@@ -10,6 +10,9 @@ export enum EProjectSort {
 export class ProjectsSortedByVouchOrFlagType {
   @Field(() => ID)
   id!: string;
+
+  @Field(() => [Int], { nullable: true })
+  rfRounds: number[] = [];
 }
 
 @ObjectType()

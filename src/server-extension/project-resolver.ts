@@ -73,6 +73,7 @@ export class ProjectResolver {
       const query = `
         SELECT 
           project.id,
+          project.rf_rounds,
           SUM(organisation_project.count) AS total_count 
         FROM 
           project 
@@ -90,8 +91,16 @@ export class ProjectResolver {
 
       // Execute the query with parameters
       const rawProjects = await manager.query(query, parameters);
-
-      return rawProjects;
+      return rawProjects.map(
+        (rawProject: {
+          id: string;
+          rf_rounds: number[] | null;
+          total_count: number;
+        }) => ({
+          ...rawProject,
+          rfRounds: rawProject.rf_rounds,
+        })
+      );
     } catch (error) {
       console.error("Error fetching and sorting projects:", error);
       throw new Error("Failed to fetch and sort projects");
