@@ -13,6 +13,9 @@ export class ProjectsSortedByVouchOrFlagType {
 
   @Field(() => [Int], { nullable: true })
   rfRounds: number[] = [];
+
+  @Field()
+  source: string = "";
 }
 
 @ObjectType()
