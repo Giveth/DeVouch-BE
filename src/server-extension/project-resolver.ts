@@ -73,6 +73,7 @@ export class ProjectResolver {
       const query = `
         SELECT 
           project.id,
+          project.source,
           project.rf_rounds,
           SUM(organisation_project.count) AS total_count 
         FROM 
@@ -94,6 +95,7 @@ export class ProjectResolver {
       return rawProjects.map(
         (rawProject: {
           id: string;
+          source: string;
           rf_rounds: number[] | null;
           total_count: number;
         }) => ({
