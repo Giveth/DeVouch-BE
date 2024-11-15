@@ -37,28 +37,43 @@ export class ProjectResolver {
         paramIndex++;
       }
 
+      // Add vouch/flag condition
+      conditions.push(`organisation_project.vouch = $${paramIndex}`);
+      parameters.push(vouchValue);
+      paramIndex++;
+
+      // Initialize OR conditions
+      const orConditions = [];
+
       // Add source filter if sources are provided
       if (sources && sources.length > 0) {
-        conditions.push(`project.source = ANY($${paramIndex}::text[])`);
+        orConditions.push(`project.source = ANY($${paramIndex}::text[])`);
         parameters.push(sources);
         paramIndex++;
       }
 
       // Add rfRounds filter if rfRounds are provided
       if (rfRounds && rfRounds.length > 0) {
-        conditions.push(`project.rf_rounds && $${paramIndex}::int[]`);
+        orConditions.push(`project.rf_rounds && $${paramIndex}::int[]`);
         parameters.push(rfRounds);
         paramIndex++;
       }
 
-      // Add vouch/flag condition
-      conditions.push(`organisation_project.vouch = $${paramIndex}`);
-      parameters.push(vouchValue);
-      paramIndex++;
-
       // Construct WHERE clause
+      const whereClauseParts = [];
+
+      if (conditions.length > 0) {
+        whereClauseParts.push(conditions.join(" AND "));
+      }
+
+      if (orConditions.length > 0) {
+        whereClauseParts.push("(" + orConditions.join(" OR ") + ")");
+      }
+
       const whereClause =
-        conditions.length > 0 ? "WHERE " + conditions.join(" AND ") : "";
+        whereClauseParts.length > 0
+          ? "WHERE " + whereClauseParts.join(" AND ")
+          : "";
 
       // Add limit and offset parameters
       parameters.push(limit);
