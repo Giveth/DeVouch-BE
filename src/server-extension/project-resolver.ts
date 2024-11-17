@@ -45,16 +45,44 @@ export class ProjectResolver {
       // Initialize OR conditions
       const orConditions = [];
 
-      // Add source filter if sources are provided
+      // Separate sources into 'rf' and others
+      let sourcesWithoutRF: string[] = [];
+      let hasRFSource = false;
+
       if (sources && sources.length > 0) {
+        hasRFSource = sources.includes("rf");
+        sourcesWithoutRF = sources.filter((s) => s !== "rf");
+      }
+
+      // Add condition for sources excluding 'rf'
+      if (sourcesWithoutRF.length > 0) {
         orConditions.push(`project.source = ANY($${paramIndex}::text[])`);
-        parameters.push(sources);
+        parameters.push(sourcesWithoutRF);
         paramIndex++;
       }
 
-      // Add rfRounds filter if rfRounds are provided
-      if (rfRounds && rfRounds.length > 0) {
-        orConditions.push(`project.rf_rounds && $${paramIndex}::int[]`);
+      // Add condition for 'rf' source
+      if (hasRFSource) {
+        if (rfRounds && rfRounds.length > 0) {
+          orConditions.push(
+            `(project.source = 'rf' AND project.rf_rounds && $${paramIndex}::int[])`
+          );
+          parameters.push(rfRounds);
+          paramIndex++;
+        } else {
+          orConditions.push(`project.source = 'rf'`);
+        }
+      }
+
+      // If sources is not provided but rfRounds are provided
+      if (
+        (!sources || sources.length === 0) &&
+        rfRounds &&
+        rfRounds.length > 0
+      ) {
+        orConditions.push(
+          `(project.source = 'rf' AND project.rf_rounds && $${paramIndex}::int[])`
+        );
         parameters.push(rfRounds);
         paramIndex++;
       }
