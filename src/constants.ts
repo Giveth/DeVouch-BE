@@ -23,6 +23,8 @@ export const PROJECT_VERIFY_SCHEMA = new Set(
     .map((s) => s.trim())
 );
 
+console.log("PROJECT_VERIFY_SCHEMA", PROJECT_VERIFY_SCHEMA);
+
 export const LOOKUP_ARCHIVE = IS_PRODUCTION
   ? "https://v2.archive.subsquid.io/network/optimism-mainnet"
   : "https://v2.archive.subsquid.io/network/ethereum-sepolia";
