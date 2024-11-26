@@ -59,6 +59,9 @@ export class Processor {
           // More RPC connection options at https://docs.subsquid.io/evm-indexing/configuration/initialization/#set-data-source
           rateLimit: 10,
         })
+        .setRpcDataIngestionSettings({
+          disabled: process.env.RPC_DATA_INGESTION_DISABLED === "true",
+        })
         .setFinalityConfirmation(1)
         .setFields({
           log: {
