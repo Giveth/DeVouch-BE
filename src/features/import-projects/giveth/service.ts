@@ -10,6 +10,7 @@ export const fetchGivethProjectsBatch = async (limit: number, skip: number) => {
           limit: $limit
           skip: $skip
           sortingBy: Newest
+          includeUnlisted: true
         ) {
           projects {
             id
