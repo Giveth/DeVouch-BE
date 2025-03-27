@@ -1,3 +1,5 @@
+![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/Giveth/DeVouch-BE?style=flat&labelColor=black&color=%23F35D23)
+
 [![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/Giveth/DeVouch-BE)
 
 # Introduction
