@@ -1,20 +1,21 @@
 import cron from "node-cron";
 import { IMPORT_PROJECT_CRON_SCHEDULE } from "../../constants";
 import { fetchAndProcessGivethProjects } from "./giveth/index";
-import { fetchAndProcessRpgf3Projects } from "./rpgf";
+// import { fetchAndProcessRpgf3Projects } from "./rpgf";
 import { fetchAndProcessGitcoinProjects } from "./gitcoin";
 import { fetchRFProjectsByRound } from "./rf";
 import { fetchAndProcessRlProjects } from "./retroList";
-
+import { fetchAndProcessGardensProjects } from "./garden";
 export const task = async () => {
   console.log("Importing Projects", new Date());
-  await fetchAndProcessGivethProjects();
-  await fetchAndProcessGitcoinProjects();
-  // fetchAndProcessRpgf3Projects();
-  await fetchRFProjectsByRound(4);
-  // await fetchRFProjectsByRound(5); //TODO: It will fill on 20th Sep
-  await fetchAndProcessRlProjects(5);
-  await fetchAndProcessRlProjects(6);
+  // await fetchAndProcessGivethProjects();
+  // await fetchAndProcessGitcoinProjects();
+  // // fetchAndProcessRpgf3Projects();
+  // await fetchRFProjectsByRound(4);
+  // // await fetchRFProjectsByRound(5); //TODO: It will fill on 20th Sep
+  // await fetchAndProcessRlProjects(5);
+  // await fetchAndProcessRlProjects(6);
+  await fetchAndProcessGardensProjects();
 };
 
 export const importProjects = async () => {
