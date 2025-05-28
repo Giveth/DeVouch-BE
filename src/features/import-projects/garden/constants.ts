@@ -35,12 +35,6 @@ const GARDENS_SUBGRAPHS = [
     name: "Base",
     url: `${THEGRAPH_API_URL}HAjsxiYJEkV8oDZgVTaJE9NQ2XzgqekFbY99tMGu53eJ`,
   },
-  {
-    chainId: 421614, // Arbitrum Sepolia (testnet)
-    name: "Arbitrum Sepolia",
-    url: `${THEGRAPH_API_URL}BfZYwhZ1rTb22Nah1u6YyXtUtAdgGNtZhW1EBb4mFzAU`,
-    isTestnet: true,
-  },
 ];
 
 // Arbitrum Sepolia (testnet) - include in development
@@ -49,7 +43,6 @@ if (process.env.NODE_ENV === "development") {
     chainId: 421614,
     name: "Arbitrum Sepolia",
     url: `${THEGRAPH_API_URL}BfZYwhZ1rTb22Nah1u6YyXtUtAdgGNtZhW1EBb4mFzAU`,
-    isTestnet: true,
   });
 }
 
