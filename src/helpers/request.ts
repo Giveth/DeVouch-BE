@@ -24,8 +24,6 @@ export const graphQLRequestAPIKey = async (
 
   const apiKey = process.env.THEGRAPH_API_KEY;
 
-  console.log('Using TheGraph API key:', process.env.THEGRAPH_API_KEY);
-  
   if (apiKey) {
     headers["Authorization"] = `Bearer ${apiKey}`;
   }
@@ -38,7 +36,7 @@ export const graphQLRequestAPIKey = async (
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`GraphQL request failed: ${res.status} - ${text} - ${url} - ${process.env.THEGRAPH_API_KEY}`);
+    throw new Error(`GraphQL request failed: ${res.status} - ${text}`);
   }
 
   return await res.json();
