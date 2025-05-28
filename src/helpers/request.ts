@@ -35,7 +35,7 @@ export const graphQLRequestAPIKey = async (
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`GraphQL request failed: ${res.status} - ${text}`);
+    throw new Error(`GraphQL request failed: ${res.status} - ${text} - ${process.env.THEGRAPH_API_KEY}`);
   }
 
   return await res.json();
