@@ -7,37 +7,37 @@ export const THEGRAPH_API_URL =
 const GARDENS_SUBGRAPHS = [
   {
     chainId: 10, // Optimism
-    name: 'Optimism',
+    name: "Optimism",
     url: `${THEGRAPH_API_URL}FmcVWeR9xdJyjM53DPuCvEdH24fSXARdq4K5K8EZRZVp`,
   },
   {
     chainId: 42220, // Celo
-    name: 'Celo',
+    name: "Celo",
     url: `${THEGRAPH_API_URL}BsXEnGaXdj3CkGRn95bswGcv2mQX7m8kNq7M7WBxxPx8`,
   },
   {
     chainId: 137, // Polygon
-    name: 'Polygon',
+    name: "Polygon",
     url: `${THEGRAPH_API_URL}4vsznmRkUGm9DZFBwvC6PDvGPVfVLQcUUr5ExdTNZiUc`,
   },
   {
     chainId: 42161, // Arbitrum
-    name: 'Arbitrum',
+    name: "Arbitrum",
     url: `${THEGRAPH_API_URL}9ejruFicuLT6hfuXNTnS8UCwxTWrHz4uinesdZu1dKmk`,
   },
   {
     chainId: 100, // Gnosis
-    name: 'Gnosis',
+    name: "Gnosis",
     url: `${THEGRAPH_API_URL}ELGHrYhvJJQrYkVsYWS5iDuFpQ1p834Q2k2kBmUAVZAi`,
   },
   {
     chainId: 8453, // Base
-    name: 'Base',
+    name: "Base",
     url: `${THEGRAPH_API_URL}HAjsxiYJEkV8oDZgVTaJE9NQ2XzgqekFbY99tMGu53eJ`,
   },
   {
     chainId: 421614, // Arbitrum Sepolia (testnet)
-    name: 'Arbitrum Sepolia',
+    name: "Arbitrum Sepolia",
     url: `${THEGRAPH_API_URL}BfZYwhZ1rTb22Nah1u6YyXtUtAdgGNtZhW1EBb4mFzAU`,
     isTestnet: true,
   },
@@ -47,7 +47,7 @@ const GARDENS_SUBGRAPHS = [
 if (process.env.NODE_ENV === "development") {
   GARDENS_SUBGRAPHS.push({
     chainId: 421614,
-    name: 'Arbitrum Sepolia',
+    name: "Arbitrum Sepolia",
     url: `${THEGRAPH_API_URL}BfZYwhZ1rTb22Nah1u6YyXtUtAdgGNtZhW1EBb4mFzAU`,
     isTestnet: true,
   });
@@ -55,9 +55,13 @@ if (process.env.NODE_ENV === "development") {
 
 export { GARDENS_SUBGRAPHS };
 
+export const GARDEN_IMAGE_CID =
+  "Qme9BKMXbTkjr71FrD6BvMcFXny3TLYFYHLWz7q7BBsbGU";
+
 export const GARDEN_API_LIMIT = 2;
 
-export const IPFS_GATEWAY = process.env.IPFS_GATEWAY || "https://ipfs.io/ipfs";
+export const IPFS_GATEWAY =
+  process.env.IPFS_GATEWAY || "https://giveth.mypinata.cloud/ipfs";
 
 export const gardensSourceConfig: SourceConfig = {
   source: "garden",

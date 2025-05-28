@@ -5,7 +5,6 @@ export const fetchGardensProjectsBatch = async (
   skip: number,
   subgraph: any
 ) => {
-  console.log("fetchGardensProjectsBatch", first, skip, subgraph);
   try {
     const res = await graphQLRequestAPIKey(
       subgraph.url,

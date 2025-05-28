@@ -1,6 +1,10 @@
 import type { GardenProjectInfo } from "./type";
 import { updateOrCreateProject } from "../helpers";
-import { IPFS_GATEWAY, gardensSourceConfig } from "./constants";
+import {
+  GARDEN_IMAGE_CID,
+  IPFS_GATEWAY,
+  gardensSourceConfig,
+} from "./constants";
 import Showdown from "showdown";
 
 const generateGardenUrl = (project: GardenProjectInfo): string => {
@@ -53,7 +57,7 @@ export const processProjectsBatch = async (
       title: project.name || project.communityName,
       description: descriptionStr,
       url: generateGardenUrl(project),
-      image: "",
+      image: convertIpfsHashToHttps(GARDEN_IMAGE_CID),
       descriptionHtml: descriptionStr
         ? converter.makeHtml(descriptionStr)
         : undefined,
