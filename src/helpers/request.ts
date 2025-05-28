@@ -23,6 +23,9 @@ export const graphQLRequestAPIKey = async (
   };
 
   const apiKey = process.env.THEGRAPH_API_KEY;
+
+  console.log('Using TheGraph API key:', process.env.THEGRAPH_API_KEY);
+  
   if (apiKey) {
     headers["Authorization"] = `Bearer ${apiKey}`;
   }
