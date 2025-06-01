@@ -3,6 +3,7 @@ import { updateOrCreateProject } from "../helpers";
 import {
   GARDEN_IMAGE_CID,
   IPFS_GATEWAY,
+  IPFS_GATEWAY_GARDEN,
   gardensSourceConfig,
 } from "./constants";
 import Showdown from "showdown";
@@ -22,7 +23,7 @@ const convertIpfsHashToHttps = (hash: string) => {
 const getDescription = async (covenantIpfsHash: string) => {
   if (!covenantIpfsHash) return "";
   try {
-    const response = await fetch(`${IPFS_GATEWAY}/${covenantIpfsHash}`);
+    const response = await fetch(`${IPFS_GATEWAY_GARDEN}/${covenantIpfsHash}`);
 
     const contentType = response.headers.get("content-type");
 

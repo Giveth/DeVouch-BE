@@ -56,6 +56,9 @@ export const GARDEN_API_LIMIT = 2;
 export const IPFS_GATEWAY =
   process.env.IPFS_GATEWAY || "https://giveth.mypinata.cloud/ipfs";
 
+export const IPFS_GATEWAY_GARDEN =
+  process.env.IPFS_GATEWAY_GARDEN || "https://app.gardens.fund/api/ipfs";
+
 export const gardensSourceConfig: SourceConfig = {
   source: "garden",
   idField: "id",
