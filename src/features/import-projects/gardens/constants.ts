@@ -60,7 +60,7 @@ export const IPFS_GATEWAY_GARDEN =
   process.env.IPFS_GATEWAY_GARDEN || "https://app.gardens.fund/api/ipfs";
 
 export const gardensSourceConfig: SourceConfig = {
-  source: "garden",
+  source: "gardens",
   idField: "id",
   titleField: "title",
   descriptionField: "description",
