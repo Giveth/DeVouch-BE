@@ -5,7 +5,7 @@ import { fetchAndProcessGivethProjects } from "./giveth/index";
 import { fetchAndProcessGitcoinProjects } from "./gitcoin";
 import { fetchRFProjectsByRound } from "./rf";
 import { fetchAndProcessRlProjects } from "./retroList";
-import { fetchAndProcessGardensProjects } from "./garden";
+import { fetchAndProcessGardensProjects } from "./gardens";
 export const task = async () => {
   console.log("Importing Projects", new Date());
   await fetchAndProcessGivethProjects();
