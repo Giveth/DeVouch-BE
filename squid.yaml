@@ -11,6 +11,6 @@ deploy:
   processor:
     cmd: [ "sqd", "process:prod" ]
     env:
-      RPC_ENDPOINT: ${RPC_ENDPOINT:-${{ secrets.RPC_ENDPOINT }}}
+      RPC_ENDPOINT: ${{ secrets.RPC_ENDPOINT }}
   api:
     cmd: [ "sqd", "serve:prod" ]
