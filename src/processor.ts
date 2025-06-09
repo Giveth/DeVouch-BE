@@ -44,6 +44,7 @@ export class Processor {
       );
 
       console.log("result", result);
+      console.log("result", process.env.RPC_ENDPOINT);
 
       Processor.instance = new EvmBatchProcessor()
         // Lookup archive by the network name in Subsquid registry
