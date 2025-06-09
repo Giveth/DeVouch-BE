@@ -150,3 +150,5 @@ The project uses GitHub Actions for continuous integration. Pull requests are au
 - Database logs are available in the PostgreSQL container.
 
 For more detailed information, visit the [Giveth docs website](https://docs.giveth.io/devouch).
+
+
