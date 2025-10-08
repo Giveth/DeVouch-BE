@@ -44,10 +44,11 @@ export const manageProjectRemovals = async (
       (id) => !shouldKeepProjects.includes(id)
     );
 
-    console.log("projectIdsToManipulate", projectIdsToManipulate);
-
     if (projectIdsToManipulate.length === 0) {
       // No projects to Manipulate
+      console.log(
+        `[${new Date().toISOString()}] - INFO: No projects to Manipulate - ${round} - retroList`
+      );
       return;
     }
 
