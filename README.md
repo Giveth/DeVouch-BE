@@ -14,7 +14,7 @@ DeVouch is a decentralized application that allows users to attest to a project'
 - Project vouching and flagging functionality
 - Multi-organization support
 - GraphQL API for data querying
-- Integration with multiple data sources (Giveth, Gitcoin, RetroFund 4 (RF4), RetroFund 5 (RF5))
+- Integration with multiple data sources (Giveth, Gitcoin, RetroFund 4 (RF4), RetroFund 5 (RF5)).
 
 ### Live Links
 - Documentation: [Giveth docs website](https://docs.giveth.io/devouch)
