@@ -29,6 +29,9 @@ export const LOOKUP_ARCHIVE = IS_PRODUCTION
   ? "https://v2.archive.subsquid.io/network/optimism-mainnet"
   : "https://v2.archive.subsquid.io/network/ethereum-sepolia";
 
+// Subsquid Network Gateway API key (get one at https://portal.sqd.dev)
+export const SQD_API_KEY = process.env.SQD_API_KEY;
+
 export const START_BLOCK = Number.parseInt(
   process.env.START_BLOCK || (IS_PRODUCTION ? "119837389" : "5815457")
 );

@@ -9,7 +9,12 @@ import {
 } from "@subsquid/evm-processor";
 
 import * as EASContract from "./abi/EAS";
-import { EAS_CONTRACT_ADDRESS, LOOKUP_ARCHIVE, START_BLOCK } from "./constants";
+import {
+  EAS_CONTRACT_ADDRESS,
+  LOOKUP_ARCHIVE,
+  SQD_API_KEY,
+  START_BLOCK,
+} from "./constants";
 import { getEntityManagerByConnection } from "./controllers/utils/databaseHelper";
 import { Organisation } from "./model";
 
@@ -49,7 +54,8 @@ export class Processor {
       Processor.instance = new EvmBatchProcessor()
         // Lookup archive by the network name in Subsquid registry
         // See https://docs.subsquid.io/evm-indexing/supported-networks/
-        .setGateway(LOOKUP_ARCHIVE)
+        // API key is required for the v2 gateway (https://portal.sqd.dev)
+        .setGateway({ url: LOOKUP_ARCHIVE, apiKey: SQD_API_KEY })
         // Chain RPC endpoint is required for
         //  - indexing unfinalized blocks https://docs.subsquid.io/basics/unfinalized-blocks/
         //  - querying the contract state https://docs.subsquid.io/evm-indexing/query-state/
