@@ -2,7 +2,7 @@ import { SourceConfig } from "../types";
 
 export const GITCOIN_API_URL =
   process.env.GITCOIN_API_URL ||
-  "https://grants-stack-indexer-v2.gitcoin.co/graphql";
+  "https://indexer.grantsstack.giveth.io/v1/graphql";
 
 export const IPFS_GATEWAY = process.env.IPFS_GATEWAY || "https://ipfs.io/ipfs";
 
