@@ -1,11 +1,16 @@
 import { describe, expect, test, afterAll } from "@jest/globals";
-import { closeConnection, getTestCtx, getTestEntityManager } from "./utils";
+import {
+  closeConnection,
+  deleteAll,
+  getTestCtx,
+  getTestEntityManager,
+} from "./utils";
 import { Organisation } from "../model";
 
 describe("simple storage", () => {
   beforeAll(async () => {
     const em = await getTestEntityManager();
-    await em.getRepository(Organisation).delete({});
+    await deleteAll(em, Organisation);
   });
   afterAll(async () => {
     await closeConnection();

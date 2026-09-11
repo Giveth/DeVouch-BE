@@ -11,7 +11,10 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "skipLibCheck": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    // TypeScript 6 no longer auto-includes @types packages; list the ones
+    // providing globals (node builtins and the jest test globals) explicitly.
+    "types": ["node", "jest"]
   },
   "include": ["src"],
   "exclude": [

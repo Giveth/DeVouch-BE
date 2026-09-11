@@ -24,7 +24,6 @@ export const importProjects = async () => {
       `Importing Projects scheduling ${IMPORT_PROJECT_CRON_SCHEDULE}.`
     );
     cron.schedule(IMPORT_PROJECT_CRON_SCHEDULE, task, {
-      scheduled: true,
       timezone: "UTC",
     });
     task();

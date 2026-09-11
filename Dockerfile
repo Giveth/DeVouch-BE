@@ -1,5 +1,5 @@
-# Use the official Node.js 20 image as a parent image
-FROM node:20-alpine
+# Use the official Node.js 22 LTS image as a parent image
+FROM node:22-alpine
 
 # Set the working directory in the Docker container
 WORKDIR /usr/src/app

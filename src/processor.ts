@@ -49,13 +49,11 @@ export class Processor {
       );
 
       console.log("result", result);
-      console.log("result", process.env.RPC_ENDPOINT);
 
       Processor.instance = new EvmBatchProcessor()
         // Lookup archive by the network name in Subsquid registry
         // See https://docs.subsquid.io/evm-indexing/supported-networks/
         // API key is required for the v2 gateway (https://portal.sqd.dev)
-        .setGateway({ url: LOOKUP_ARCHIVE, apiKey: SQD_API_KEY })
         // Chain RPC endpoint is required for
         //  - indexing unfinalized blocks https://docs.subsquid.io/basics/unfinalized-blocks/
         //  - querying the contract state https://docs.subsquid.io/evm-indexing/query-state/
@@ -88,6 +86,9 @@ export class Processor {
           ],
           transaction: true,
         });
+      if (process.env.SQD_RPC_ONLY !== "true") {
+        Processor.instance.setGateway({ url: LOOKUP_ARCHIVE, apiKey: SQD_API_KEY });
+      }
     }
     return Processor.instance;
   }

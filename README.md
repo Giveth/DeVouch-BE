@@ -61,7 +61,7 @@ After projects and valid attestors are imported, attestors can start attesting t
 ## 3. Getting Started
 
 ### Prerequisites
-- Node.js (v20 or higher)
+- Node.js (v22 or higher)
 - Docker and Docker Compose
 - PostgreSQL
 - Git
@@ -88,6 +88,12 @@ Below are the required environment variables. Please refer to `.env.template` fo
 - `RPC_ENDPOINT`: Ethereum node endpoint
 - `SQUID_NETWORK`: Network to use for Squid (e.g., `eth-sepolia`, `optimism-mainnet`)
 - `IMPORT_PROJECT_CRON_SCHEDULE`: Cron schedule for project import
+- `SQD_API_KEY`: Subsquid Network Gateway API key (https://portal.sqd.dev)
+- `SQD_RPC_ONLY`: set to `"true"` to skip the Subsquid Network Gateway and index
+  from `RPC_ENDPOINT` only. Unset (the default) uses the gateway.
+- `GIVETH_API_VERSION`: set to `"6"` to import Giveth projects through the
+  keyset-paginated `devouchProjectCatalog` query. Unset (the default) uses the
+  legacy `allProjects` query.
 - Various API endpoints for integrations (GIVETH_API_URL, RPGF3_API_URL, etc.)
 - IPFS gateway configuration
 
@@ -140,6 +146,14 @@ The project uses GitHub Actions for continuous integration. Pull requests are au
 - Database connection issues: Check PostgreSQL container status and credentials.
 - RPC endpoint errors: Verify RPC endpoint availability and API keys.
 - GraphQL endpoint not responding: Check port configuration and server logs.
+- `sqd typegen` reintroduces a type error in `src/abi/abi.support.ts`: the
+  generated `decodeResult` needs an `as any as Result` cast on its return to
+  compile under TypeScript 5.9+. Reapply it after regenerating the ABI bindings.
+- `sqd codegen` rewrites `src/model/generated/` against the newer
+  `@subsquid/typeorm-codegen`, which names indexes explicitly. The live database
+  uses TypeORM's auto-generated index names, so regenerating will make the next
+  `sqd migration:generate` emit index renames. Treat that as a deliberate,
+  separate migration rather than a side effect of codegen.
 
 ### Logs and Debugging
 - Enable debug mode by setting `SQD_DEBUG=*` in the environment.

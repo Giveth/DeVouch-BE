@@ -1,5 +1,10 @@
 import { describe, expect, test, afterAll } from "@jest/globals";
-import { closeConnection, getTestCtx, getTestEntityManager } from "./utils";
+import {
+  closeConnection,
+  deleteAll,
+  getTestCtx,
+  getTestEntityManager,
+} from "./utils";
 import { getProject } from "../controllers/utils/modelHelper";
 import { Project } from "../model";
 
@@ -10,7 +15,7 @@ describe("get project", () => {
 
   beforeEach(async () => {
     const em = await getTestEntityManager();
-    await em.delete(Project, {});
+    await deleteAll(em, Project);
   });
 
   test("handles non-existent projects", async () => {
