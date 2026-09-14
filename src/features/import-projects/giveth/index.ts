@@ -1,40 +1,13 @@
 import { GIVETH_API_LIMIT } from "./constants";
 import { processProjectsBatch } from "./helpers";
 import { fetchGivethProjectsBatch, fetchGivethCatalogBatch } from "./service";
+import { nextCatalogCursor } from "./cursor";
 import { ImportResult } from "../types";
-
-// `devouchProjectCatalog` is a keyset cursor on `afterId`, so a page is
-// contractually ascending by id and the next cursor is its LAST element. Verify
-// that ordering rather than assume it: on a descending page the last id is not
-// the highest, so advancing to it would step past rows we never read and end the
-// loop early - reporting a truncated import as a completed one.
-export const nextCatalogCursor = (
-  projectsBatch: { id: string | number }[],
-  cursor: number
-): number => {
-  const ids = projectsBatch.map((project) => Number(project.id));
-  if (ids.some((id) => !Number.isSafeInteger(id))) {
-    throw new Error("Giveth catalog returned a project with a non-numeric id");
-  }
-
-  const nextId = ids[ids.length - 1];
-  if (nextId !== Math.max(...ids)) {
-    throw new Error(
-      `Giveth catalog page is not ordered ascending by id (last ${nextId}, highest ${Math.max(
-        ...ids
-      )})`
-    );
-  }
-  if (nextId <= cursor) {
-    throw new Error(`Giveth catalog cursor did not advance past id ${cursor}`);
-  }
-
-  return nextId;
-};
 
 export const fetchAndProcessGivethProjects =
   async (): Promise<ImportResult> => {
     let imported = 0;
+    let dropped = 0;
     try {
       let hasMoreProjects = true;
       let skip = 0;
@@ -46,8 +19,13 @@ export const fetchAndProcessGivethProjects =
           ? fetchGivethCatalogBatch(limit, skip)
           : fetchGivethProjectsBatch(limit, skip));
         if (projectsBatch.length > 0) {
-          await processProjectsBatch(projectsBatch);
-          imported += projectsBatch.length;
+          // Count what reached the database, not what was fetched:
+          // `updateOrCreateProject` logs persistence failures instead of
+          // throwing, so a fetched count would report a run that wrote nothing
+          // as a complete import.
+          const persisted = await processProjectsBatch(projectsBatch);
+          imported += persisted;
+          dropped += projectsBatch.length - persisted;
           skip = useCatalog
             ? nextCatalogCursor(projectsBatch, skip)
             : skip + limit;
@@ -55,6 +33,15 @@ export const fetchAndProcessGivethProjects =
           hasMoreProjects = false;
         }
       }
+
+      if (dropped > 0) {
+        const error = `${dropped} project(s) failed to persist`;
+        console.log(
+          `[${new Date().toISOString()}] - ERROR: Giveth import incomplete: ${imported} projects written, ${error}`
+        );
+        return { source: "giveth", ok: false, imported, error };
+      }
+
       console.log(`Giveth import completed: ${imported} projects processed`);
       return { source: "giveth", ok: true, imported };
     } catch (error: any) {

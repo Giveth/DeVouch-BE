@@ -11,7 +11,9 @@ export const task = async () => {
   console.log("Importing Projects", new Date());
   // Importers that report a result are collected so a failed source is visible
   // to the caller, not only to a human reading container logs. Failures are not
-  // rethrown: the remaining sources should still run.
+  // rethrown: the remaining sources should still run. Every other importer
+  // still swallows its failures and returns nothing, so the summary below names
+  // the sources it actually covers rather than implying an all-clear.
   const results: ImportResult[] = [];
   results.push(await fetchAndProcessGivethProjects());
   await fetchAndProcessGitcoinProjects();
@@ -30,7 +32,11 @@ export const task = async () => {
         .join("; ")}`
     );
   } else {
-    console.log("Project import finished: all reporting sources completed");
+    console.log(
+      `Project import finished: ${results
+        .map((result) => result.source)
+        .join(", ")} completed (other sources do not report status)`
+    );
   }
 };
 

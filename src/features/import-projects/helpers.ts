@@ -22,10 +22,14 @@ const areValuesEqual = (
   return value1 == value2; // Handles null, undefined, and string comparisons
 };
 
+// Returns whether the project reached the database. Persistence failures are
+// logged rather than thrown, so callers that count imported projects must use
+// this result - otherwise a run where every write failed still looks complete.
 export const updateOrCreateProject = async (
   project: any,
   sourceConfig: SourceConfig
-) => {
+): Promise<boolean> => {
+  let persisted = true;
   const {
     source,
     idField,
@@ -47,7 +51,7 @@ export const updateOrCreateProject = async (
     console.log(
       `[${new Date().toISOString()}] - ERROR: Failed to UPSERT project. Data source not found. Project ID: ${id}`
     );
-    return;
+    return false;
   }
 
   const existingProject = await dataSource
@@ -66,7 +70,7 @@ export const updateOrCreateProject = async (
 
   // Skip project if prelimResult is "Remove"
   if (prelimResult && project[prelimResult] === "Remove") {
-    return;
+    return true;
   }
 
   const descriptionSummary = getHtmlTextSummary(descriptionHtml || description);
@@ -132,6 +136,7 @@ export const updateOrCreateProject = async (
           `[${new Date().toISOString()}] - INFO: Project Updated. Project ID: ${id}. Changes: ${changes.join(", ")}`
         );
       } catch (error: any) {
+        persisted = false;
         console.log(
           `[${new Date().toISOString()}] - ERROR: Failed to update project. Project ID: ${id}, Error: ${error.message}`
         );
@@ -170,11 +175,14 @@ export const updateOrCreateProject = async (
         `[${new Date().toISOString()}] - INFO: Project Created. Project ID: ${id}`
       );
     } catch (error: any) {
+      persisted = false;
       console.log(
         `[${new Date().toISOString()}] - ERROR: Failed to create project. Project ID: ${id}, Error: ${error.message}`
       );
     }
   }
+
+  return persisted;
 };
 
 const getHtmlTextSummary = (

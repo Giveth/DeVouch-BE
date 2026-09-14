@@ -1,4 +1,4 @@
-import { nextCatalogCursor } from "../features/import-projects/giveth/index";
+import { nextCatalogCursor } from "../features/import-projects/giveth/cursor";
 
 // The catalog query carries no ordering argument, so the ascending contract
 // `afterId` depends on is unenforced by the API. These cover the guards that
@@ -10,6 +10,22 @@ describe("Giveth catalog cursor", () => {
 
   it("accepts numeric string ids", () => {
     expect(nextCatalogCursor([{ id: "10" }, { id: "12" }], 0)).toBe(12);
+  });
+
+  it("throws on an unordered page that still ends on its highest id", () => {
+    // The regression case for a last-vs-highest check: 12 is both the last and
+    // the highest id, so that check passes, yet 5 comes after 10 and the page is
+    // unordered. An unordered catalog cannot guarantee `afterId` reaches every
+    // row, so advancing here risks skipping ids this run never sees.
+    expect(() =>
+      nextCatalogCursor([{ id: 10 }, { id: 5 }, { id: 12 }], 0)
+    ).toThrow(/not ordered ascending/);
+  });
+
+  it("throws on a page containing duplicate ids", () => {
+    expect(() =>
+      nextCatalogCursor([{ id: 10 }, { id: 10 }, { id: 12 }], 0)
+    ).toThrow(/not ordered ascending/);
   });
 
   it("throws on a descending page rather than skipping unread rows", () => {

@@ -146,11 +146,15 @@ The project uses GitHub Actions for continuous integration. Pull requests are au
 - Database connection issues: Check PostgreSQL container status and credentials.
 - RPC endpoint errors: Verify RPC endpoint availability and API keys.
 - GraphQL endpoint not responding: Check port configuration and server logs.
-- `GIVETH_API_VERSION=6` does not work yet. It selects the keyset-paginated
-  `devouchProjectCatalog` query, which the Giveth API does not expose (verified
-  by introspecting `https://mainnet.serve.giveth.io/graphql`), so the import
-  fails on the first page. Leave the variable unset to use the legacy
-  `allProjects` query until the impact-graph release adding the query ships.
+- `GIVETH_API_VERSION=6` does not work against the public Giveth API yet. It
+  selects the keyset-paginated `devouchProjectCatalog` query, which that API does
+  not expose (verified by introspecting
+  `https://mainnet.serve.giveth.io/graphql`), so the import fails on the first
+  page. Leave the variable unset to use the legacy `allProjects` query until the
+  impact-graph release adding the query ships. `compose.local.yaml` is the
+  deliberate exception: it sets `GIVETH_API_VERSION: "6"` and points
+  `GIVETH_API_URL` at an impact-graph on `:4000`, so that stack needs one running
+  locally or every cron cycle logs "Giveth import aborted after 0 projects".
   Two things to confirm against the real schema before enabling it: the legacy
   query passes `includeUnlisted: true` and the catalog query has no equivalent,
   and the catalog aliases `creationDate: createdAt`, which
