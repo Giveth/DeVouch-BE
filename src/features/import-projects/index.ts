@@ -1,4 +1,5 @@
 import cron from "node-cron";
+import { ImportResult } from "./types";
 import { IMPORT_PROJECT_CRON_SCHEDULE } from "../../constants";
 import { fetchAndProcessGivethProjects } from "./giveth/index";
 // import { fetchAndProcessRpgf3Projects } from "./rpgf";
@@ -8,7 +9,11 @@ import { fetchAndProcessRlProjects } from "./retroList";
 import { fetchAndProcessGardensProjects } from "./gardens";
 export const task = async () => {
   console.log("Importing Projects", new Date());
-  await fetchAndProcessGivethProjects();
+  // Importers that report a result are collected so a failed source is visible
+  // to the caller, not only to a human reading container logs. Failures are not
+  // rethrown: the remaining sources should still run.
+  const results: ImportResult[] = [];
+  results.push(await fetchAndProcessGivethProjects());
   await fetchAndProcessGitcoinProjects();
   // fetchAndProcessRpgf3Projects();
   await fetchRFProjectsByRound(4);
@@ -16,6 +21,17 @@ export const task = async () => {
   await fetchAndProcessRlProjects(5);
   // await fetchAndProcessRlProjects(6); // link is not working
   await fetchAndProcessGardensProjects();
+
+  const failed = results.filter((result) => !result.ok);
+  if (failed.length > 0) {
+    console.log(
+      `Project import finished with ${failed.length} failed source(s): ${failed
+        .map((result) => `${result.source} (${result.error})`)
+        .join("; ")}`
+    );
+  } else {
+    console.log("Project import finished: all reporting sources completed");
+  }
 };
 
 export const importProjects = async () => {

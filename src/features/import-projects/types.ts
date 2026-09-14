@@ -1,3 +1,10 @@
+export interface ImportResult {
+  source: string;
+  ok: boolean;
+  imported: number;
+  error?: string;
+}
+
 export interface SourceConfig {
   source: string;
   idField: string;

@@ -146,6 +146,16 @@ The project uses GitHub Actions for continuous integration. Pull requests are au
 - Database connection issues: Check PostgreSQL container status and credentials.
 - RPC endpoint errors: Verify RPC endpoint availability and API keys.
 - GraphQL endpoint not responding: Check port configuration and server logs.
+- `GIVETH_API_VERSION=6` does not work yet. It selects the keyset-paginated
+  `devouchProjectCatalog` query, which the Giveth API does not expose (verified
+  by introspecting `https://mainnet.serve.giveth.io/graphql`), so the import
+  fails on the first page. Leave the variable unset to use the legacy
+  `allProjects` query until the impact-graph release adding the query ships.
+  Two things to confirm against the real schema before enabling it: the legacy
+  query passes `includeUnlisted: true` and the catalog query has no equivalent,
+  and the catalog aliases `creationDate: createdAt`, which
+  `givethSourceConfig.sourceCreatedAtField` reads as the project's
+  `sourceCreatedAt`.
 - `sqd typegen` reintroduces a type error in `src/abi/abi.support.ts`: the
   generated `decodeResult` needs an `as any as Result` cast on its return to
   compile under TypeScript 5.9+. Reapply it after regenerating the ABI bindings.
