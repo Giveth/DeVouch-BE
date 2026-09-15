@@ -40,7 +40,16 @@ export const task = async (): Promise<ImportResult[]> => {
       inspected: inspected(totals),
       ...totals,
       sources: results.map(
-        ({ source, ok, written, unchanged, skipped, failed: f, error }) => ({
+        ({
+          source,
+          ok,
+          written,
+          unchanged,
+          skipped,
+          failed: f,
+          error,
+          note,
+        }) => ({
           source,
           ok,
           written,
@@ -48,6 +57,7 @@ export const task = async (): Promise<ImportResult[]> => {
           skipped,
           failed: f,
           ...(error ? { error } : {}),
+          ...(note ? { note } : {}),
         })
       ),
     })}`

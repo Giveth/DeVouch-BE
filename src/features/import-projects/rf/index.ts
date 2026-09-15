@@ -3,7 +3,13 @@ import { RF_API_URL } from "./constants";
 import { saveBatchProjects } from "./helpers";
 import { RfApiResponse, RfProjectInfo } from "./type";
 import { ImportResult, ImportTally } from "../types";
-import { abortImport, addTally, emptyTally, finishImport } from "../helpers";
+import {
+  abortImport,
+  addTally,
+  emptyTally,
+  finishImport,
+  skipImport,
+} from "../helpers";
 
 export const fetchRFProjectsByRound = async (
   round: number
@@ -19,9 +25,11 @@ export const fetchRFProjectsByRound = async (
   );
 
   if (!AGORA_API_KEY) {
-    // Missing configuration, not a failed import: report it as such rather than
-    // letting the run look like a clean zero-project success.
-    return abortImport(source, tally, new Error("AGORA_API_KEY is not set"));
+    // Missing configuration, not a failed import. Reporting it as failed would
+    // hold the run-level `ok` false on every cycle in any environment that has
+    // simply not enabled Agora, which is exactly the always-red signal the
+    // per-source reporting exists to avoid.
+    return skipImport(source, "AGORA_API_KEY is not set");
   }
 
   try {

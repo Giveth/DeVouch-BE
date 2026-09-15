@@ -20,6 +20,13 @@ export interface ImportResult extends ImportTally {
   source: string;
   ok: boolean;
   error?: string;
+  /**
+   * Why a source did no work despite succeeding - e.g. it is not configured in
+   * this environment. Distinct from `error`: a run carrying only a `note` is
+   * still `ok`, so alerting keyed on `ok` does not fire on a deliberate
+   * non-configuration.
+   */
+  note?: string;
 }
 
 export interface SourceConfig {

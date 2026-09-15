@@ -75,6 +75,14 @@ export const finishImport = (
   return { source, ok: true, ...tally };
 };
 
+// A source that is not configured in this environment did no work, but nothing
+// went wrong: report `ok` with a note so alerting keyed on `ok` is not held
+// permanently red by an optional integration nobody enabled.
+export const skipImport = (source: string, note: string): ImportResult => {
+  console.log(`${source} import skipped: ${note}`);
+  return { source, ok: true, ...emptyTally(), note };
+};
+
 // Aborted part-way: report the tally accumulated so far so a truncated run is
 // distinguishable from a complete one.
 export const abortImport = (
