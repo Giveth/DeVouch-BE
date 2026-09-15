@@ -1,26 +1,29 @@
 import { getDataSource } from "../../../helpers/db";
 import { type GivethProjectInfo } from "./type";
-import { updateOrCreateProject } from "../helpers";
+import { emptyTally, recordOutcome, updateOrCreateProject } from "../helpers";
+import { ImportTally } from "../types";
 import { givethSourceConfig } from "./constants";
 
 export const generateGivethUrl = (project: GivethProjectInfo) => {
   return `/project/${project.slug}`;
 };
 
-// Returns how many of the batch actually reached the database, so the caller
-// counts persisted projects rather than fetched ones.
+// Returns a per-outcome tally. `written` is the only bucket that implies SQL was
+// issued: an already up-to-date project lands in `unchanged` having produced a
+// SELECT and nothing else.
 export const processProjectsBatch = async (
   projectsBatch: GivethProjectInfo[]
-): Promise<number> => {
-  let persisted = 0;
+): Promise<ImportTally> => {
+  const tally = emptyTally();
   for (const project of projectsBatch) {
     const processedProject = {
       ...project,
       url: generateGivethUrl(project),
     };
-    if (await updateOrCreateProject(processedProject, givethSourceConfig)) {
-      persisted++;
-    }
+    recordOutcome(
+      tally,
+      await updateOrCreateProject(processedProject, givethSourceConfig)
+    );
   }
-  return persisted;
+  return tally;
 };

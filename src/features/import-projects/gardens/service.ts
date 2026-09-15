@@ -5,10 +5,9 @@ export const fetchGardensProjectsBatch = async (
   skip: number,
   subgraph: any
 ) => {
-  try {
-    const res = await graphQLRequestAPIKey(
-      subgraph.url,
-      `
+  const res = await graphQLRequestAPIKey(
+    subgraph.url,
+    `
         query getCommunities($first: Int, $skip: Int) {
           registryCommunities(first: $first, skip: $skip, where: { isValid: true }) {
             id
@@ -21,24 +20,21 @@ export const fetchGardensProjectsBatch = async (
           }
         }
       `,
-      {
-        first,
-        skip,
-      }
-    );
-
-    if (!res || !res.data || !res.data.registryCommunities) {
-      console.error(
-        "Unexpected GraphQL response from subgraph:",
-        subgraph.name
-      );
-      console.dir(res, { depth: null });
-      return [];
+    {
+      first,
+      skip,
     }
+  );
 
-    return res.data.registryCommunities;
-  } catch (error: any) {
-    console.log("Error on fetchGardensProjectsBatch:", error.message);
-    return [];
+  if (res?.errors?.length) {
+    throw new Error(
+      res.errors.map((error: { message: string }) => error.message).join("; ")
+    );
   }
+  const communities = res?.data?.registryCommunities;
+  // Never return [] on failure: the caller reads an empty page as end-of-data
+  // and would report a truncated import as a completed one.
+  if (!Array.isArray(communities))
+    throw new Error(`Invalid Gardens response from subgraph ${subgraph.name}`);
+  return communities;
 };

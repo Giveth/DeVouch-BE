@@ -87,7 +87,10 @@ export class Processor {
           transaction: true,
         });
       if (process.env.SQD_RPC_ONLY !== "true") {
-        Processor.instance.setGateway({ url: LOOKUP_ARCHIVE, apiKey: SQD_API_KEY });
+        Processor.instance.setGateway({
+          url: LOOKUP_ARCHIVE,
+          apiKey: SQD_API_KEY,
+        });
       }
     }
     return Processor.instance;

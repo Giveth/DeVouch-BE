@@ -3,7 +3,98 @@ import { Project } from "../../model";
 import { getDataSource } from "../../helpers/db";
 import { DESCRIPTION_SUMMARY_LENGTH } from "../../constants";
 import { convert } from "html-to-text";
-import { SourceConfig } from "./types";
+import {
+  ImportResult,
+  ImportTally,
+  ProjectImportOutcome,
+  SourceConfig,
+} from "./types";
+
+export const emptyTally = (): ImportTally => ({
+  written: 0,
+  unchanged: 0,
+  skipped: 0,
+  failed: 0,
+});
+
+export const recordOutcome = (
+  tally: ImportTally,
+  outcome: ProjectImportOutcome
+): ImportTally => {
+  switch (outcome) {
+    case "created":
+    case "updated":
+      tally.written++;
+      break;
+    case "unchanged":
+      tally.unchanged++;
+      break;
+    case "skipped":
+      tally.skipped++;
+      break;
+    case "failed":
+      tally.failed++;
+      break;
+  }
+  return tally;
+};
+
+export const addTally = (into: ImportTally, from: ImportTally): ImportTally => {
+  into.written += from.written;
+  into.unchanged += from.unchanged;
+  into.skipped += from.skipped;
+  into.failed += from.failed;
+  return into;
+};
+
+export const inspected = (tally: ImportTally): number =>
+  tally.written + tally.unchanged + tally.skipped + tally.failed;
+
+const describe = (tally: ImportTally): string =>
+  `${inspected(tally)} inspected (${tally.written} written, ${
+    tally.unchanged
+  } unchanged, ${tally.skipped} skipped, ${tally.failed} failed)`;
+
+// A run that finished its pages still fails if any individual write failed:
+// those are logged rather than thrown, so the tally is the only signal.
+export const finishImport = (
+  source: string,
+  tally: ImportTally
+): ImportResult => {
+  if (tally.failed > 0) {
+    const error = `${tally.failed} project(s) failed to persist`;
+    console.log(
+      `[${new Date().toISOString()}] - ERROR: ${source} import incomplete: ${describe(
+        tally
+      )}`
+    );
+    return { source, ok: false, ...tally, error };
+  }
+
+  console.log(`${source} import completed: ${describe(tally)}`);
+  return { source, ok: true, ...tally };
+};
+
+// Aborted part-way: report the tally accumulated so far so a truncated run is
+// distinguishable from a complete one.
+export const abortImport = (
+  source: string,
+  tally: ImportTally,
+  error: any
+): ImportResult => {
+  console.log(
+    `[${new Date().toISOString()}] - ERROR: ${source} import aborted after ${describe(
+      tally
+    )}:`,
+    error?.message ?? error
+  );
+  return {
+    source,
+    ok: false,
+    ...tally,
+    error: error?.message ?? String(error),
+  };
+};
 
 const areTimestampsEqual = (
   timestamp1: Date | null | undefined,
@@ -28,8 +119,7 @@ const areValuesEqual = (
 export const updateOrCreateProject = async (
   project: any,
   sourceConfig: SourceConfig
-): Promise<boolean> => {
-  let persisted = true;
+): Promise<ProjectImportOutcome> => {
   const {
     source,
     idField,
@@ -51,7 +141,7 @@ export const updateOrCreateProject = async (
     console.log(
       `[${new Date().toISOString()}] - ERROR: Failed to UPSERT project. Data source not found. Project ID: ${id}`
     );
-    return false;
+    return "failed";
   }
 
   const existingProject = await dataSource
@@ -70,7 +160,7 @@ export const updateOrCreateProject = async (
 
   // Skip project if prelimResult is "Remove"
   if (prelimResult && project[prelimResult] === "Remove") {
-    return true;
+    return "skipped";
   }
 
   const descriptionSummary = getHtmlTextSummary(descriptionHtml || description);
@@ -101,9 +191,12 @@ export const updateOrCreateProject = async (
       changes.push(`rfRound added: "${rfRound}"`);
     }
 
-    const isUpdated = changes.length > 0;
+    if (changes.length === 0) {
+      // Up to date: no SQL is issued, so this must not be counted as a write.
+      return "unchanged";
+    }
 
-    if (isUpdated) {
+    {
       // Add the current round to rfRounds if not already present
       const rfRoundsSet = new Set(existingProject.rfRounds || []);
       if (rfRound) {
@@ -135,11 +228,12 @@ export const updateOrCreateProject = async (
         console.log(
           `[${new Date().toISOString()}] - INFO: Project Updated. Project ID: ${id}. Changes: ${changes.join(", ")}`
         );
+        return "updated";
       } catch (error: any) {
-        persisted = false;
         console.log(
           `[${new Date().toISOString()}] - ERROR: Failed to update project. Project ID: ${id}, Error: ${error.message}`
         );
+        return "failed";
       }
     }
   } else {
@@ -174,15 +268,14 @@ export const updateOrCreateProject = async (
       console.log(
         `[${new Date().toISOString()}] - INFO: Project Created. Project ID: ${id}`
       );
+      return "created";
     } catch (error: any) {
-      persisted = false;
       console.log(
         `[${new Date().toISOString()}] - ERROR: Failed to create project. Project ID: ${id}, Error: ${error.message}`
       );
+      return "failed";
     }
   }
-
-  return persisted;
 };
 
 const getHtmlTextSummary = (

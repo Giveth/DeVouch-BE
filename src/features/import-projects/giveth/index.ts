@@ -2,12 +2,12 @@ import { GIVETH_API_LIMIT } from "./constants";
 import { processProjectsBatch } from "./helpers";
 import { fetchGivethProjectsBatch, fetchGivethCatalogBatch } from "./service";
 import { nextCatalogCursor } from "./cursor";
-import { ImportResult } from "../types";
+import { ImportResult, ImportTally } from "../types";
+import { abortImport, addTally, emptyTally, finishImport } from "../helpers";
 
 export const fetchAndProcessGivethProjects =
   async (): Promise<ImportResult> => {
-    let imported = 0;
-    let dropped = 0;
+    const tally: ImportTally = emptyTally();
     try {
       let hasMoreProjects = true;
       let skip = 0;
@@ -19,13 +19,11 @@ export const fetchAndProcessGivethProjects =
           ? fetchGivethCatalogBatch(limit, skip)
           : fetchGivethProjectsBatch(limit, skip));
         if (projectsBatch.length > 0) {
-          // Count what reached the database, not what was fetched:
           // `updateOrCreateProject` logs persistence failures instead of
-          // throwing, so a fetched count would report a run that wrote nothing
-          // as a complete import.
-          const persisted = await processProjectsBatch(projectsBatch);
-          imported += persisted;
-          dropped += projectsBatch.length - persisted;
+          // throwing, so failures have to be counted rather than caught. The
+          // tally keeps writes, unchanged rows and failures apart: a run that
+          // inspected everything and wrote nothing is not a complete import.
+          addTally(tally, await processProjectsBatch(projectsBatch));
           skip = useCatalog
             ? nextCatalogCursor(projectsBatch, skip)
             : skip + limit;
@@ -34,24 +32,8 @@ export const fetchAndProcessGivethProjects =
         }
       }
 
-      if (dropped > 0) {
-        const error = `${dropped} project(s) failed to persist`;
-        console.log(
-          `[${new Date().toISOString()}] - ERROR: Giveth import incomplete: ${imported} projects written, ${error}`
-        );
-        return { source: "giveth", ok: false, imported, error };
-      }
-
-      console.log(`Giveth import completed: ${imported} projects processed`);
-      return { source: "giveth", ok: true, imported };
+      return finishImport("giveth", tally);
     } catch (error: any) {
-      // The import aborted part-way: say so loudly, with the count already
-      // written, and report it back so the caller can tell a truncated run from
-      // a complete one instead of only a human reading container logs.
-      console.log(
-        `[${new Date().toISOString()}] - ERROR: Giveth import aborted after ${imported} projects:`,
-        error.message
-      );
-      return { source: "giveth", ok: false, imported, error: error.message };
+      return abortImport("giveth", tally, error);
     }
   };

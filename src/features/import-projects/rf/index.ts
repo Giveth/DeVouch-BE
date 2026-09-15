@@ -2,8 +2,14 @@ import { AGORA_API_KEY } from "../../../constants";
 import { RF_API_URL } from "./constants";
 import { saveBatchProjects } from "./helpers";
 import { RfApiResponse, RfProjectInfo } from "./type";
+import { ImportResult, ImportTally } from "../types";
+import { abortImport, addTally, emptyTally, finishImport } from "../helpers";
 
-export const fetchRFProjectsByRound = async (round: number) => {
+export const fetchRFProjectsByRound = async (
+  round: number
+): Promise<ImportResult> => {
+  const source = `rf-round-${round}`;
+  const tally: ImportTally = emptyTally();
   let offset = 0;
   const limit = 10;
   let hasNext = true;
@@ -13,8 +19,9 @@ export const fetchRFProjectsByRound = async (round: number) => {
   );
 
   if (!AGORA_API_KEY) {
-    console.log(`[${new Date().toISOString()}] - AGORA_API_KEY is not set`);
-    return;
+    // Missing configuration, not a failed import: report it as such rather than
+    // letting the run look like a clean zero-project success.
+    return abortImport(source, tally, new Error("AGORA_API_KEY is not set"));
   }
 
   try {
@@ -39,15 +46,14 @@ export const fetchRFProjectsByRound = async (round: number) => {
 
       const res: RfApiResponse = await response.json();
 
-      await saveBatchProjects(res.data, round);
+      addTally(tally, await saveBatchProjects(res.data, round));
 
       hasNext = res.meta.has_next;
       offset = res.meta.next_offset;
     }
-  } catch (error) {
-    console.log(
-      `[${new Date().toISOString()}] - Error fetching projects for round: ${round} at offset: ${offset}`,
-      error
-    );
+
+    return finishImport(source, tally);
+  } catch (error: any) {
+    return abortImport(source, tally, error);
   }
 };

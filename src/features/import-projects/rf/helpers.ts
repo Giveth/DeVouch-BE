@@ -1,4 +1,5 @@
-import { updateOrCreateProject } from "../helpers";
+import { emptyTally, recordOutcome, updateOrCreateProject } from "../helpers";
+import { ImportTally } from "../types";
 import { rfSourceConfig } from "./constants";
 import { RfProjectInfo } from "./type";
 
@@ -18,9 +19,11 @@ const processProject = (project: RfProjectInfo, round: number) => {
 export const saveBatchProjects = async (
   projects: RfProjectInfo[],
   round: number
-) => {
+): Promise<ImportTally> => {
+  const tally = emptyTally();
   for (const _project of projects) {
     const project = processProject(_project, round);
-    await updateOrCreateProject(project, rfSourceConfig);
+    recordOutcome(tally, await updateOrCreateProject(project, rfSourceConfig));
   }
+  return tally;
 };

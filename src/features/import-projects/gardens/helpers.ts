@@ -1,5 +1,6 @@
 import type { GardenProjectInfo } from "./type";
-import { updateOrCreateProject } from "../helpers";
+import { emptyTally, recordOutcome, updateOrCreateProject } from "../helpers";
+import { ImportTally } from "../types";
 import {
   GARDEN_IMAGE_CID,
   IPFS_GATEWAY,
@@ -43,9 +44,13 @@ const getDescription = async (covenantIpfsHash: string) => {
 const converter = new Showdown.Converter();
 export const processProjectsBatch = async (
   projectsBatch: GardenProjectInfo[]
-) => {
+): Promise<ImportTally> => {
+  const tally = emptyTally();
   for (const project of projectsBatch) {
-    if (!project?.id) continue;
+    if (!project?.id) {
+      tally.skipped++;
+      continue;
+    }
     const description = await getDescription(project.covenantIpfsHash || "");
 
     const descriptionStr =
@@ -64,6 +69,10 @@ export const processProjectsBatch = async (
         : undefined,
       creationDate: null,
     };
-    await updateOrCreateProject(processedProject, gardensSourceConfig);
+    recordOutcome(
+      tally,
+      await updateOrCreateProject(processedProject, gardensSourceConfig)
+    );
   }
+  return tally;
 };
