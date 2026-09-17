@@ -1,12 +1,14 @@
 export const graphQLRequest = async (
   url: string,
   query: string,
-  variables: any
+  variables: any,
+  extraHeaders: Record<string, string> = {}
 ) => {
   const res = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      ...extraHeaders,
     },
     body: JSON.stringify({ query, variables }),
   });

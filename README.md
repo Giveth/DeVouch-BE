@@ -94,6 +94,8 @@ Below are the required environment variables. Please refer to `.env.template` fo
 - `GIVETH_API_VERSION`: set to `"6"` to import Giveth projects through the
   keyset-paginated `devouchProjectCatalog` query. Unset (the default) uses the
   legacy `allProjects` query.
+- `GIVETH_API_USERNAME` / `GIVETH_API_PASSWORD`: HTTP Basic credentials for the
+  `devouchProjectCatalog` query. Required with `GIVETH_API_VERSION=6`.
 - Various API endpoints for integrations (GIVETH_API_URL, RPGF3_API_URL, etc.)
 - IPFS gateway configuration
 
@@ -155,11 +157,17 @@ The project uses GitHub Actions for continuous integration. Pull requests are au
   deliberate exception: it sets `GIVETH_API_VERSION: "6"` and points
   `GIVETH_API_URL` at an impact-graph on `:4000`, so that stack needs one running
   locally or every cron cycle logs "Giveth import aborted after 0 projects".
-  Two things to confirm against the real schema before enabling it: the legacy
-  query passes `includeUnlisted: true` and the catalog query has no equivalent,
-  and the catalog aliases `creationDate: createdAt`, which
-  `givethSourceConfig.sourceCreatedAtField` reads as the project's
-  `sourceCreatedAt`.
+  The catalog query is also authenticated: set `GIVETH_API_USERNAME` and
+  `GIVETH_API_PASSWORD` for HTTP Basic. They are only sent when both are set and
+  only on the catalog query, so the legacy `allProjects` path never transmits
+  them to the public API even when the pair stays configured. An unauthenticated
+  request returns HTTP 200 with an `UNAUTHENTICATED` GraphQL error rather than a
+  401, so the failure surfaces from the response body and not the status code.
+  One difference remains worth confirming per instance: the legacy query passes
+  `includeUnlisted: true` and the catalog query has no equivalent argument, so
+  the two can import different project sets. The `creationDate: createdAt` alias
+  is verified - a live catalog walk returns it as the ISO timestamp
+  `givethSourceConfig.sourceCreatedAtField` expects.
 - `sqd typegen` reintroduces a type error in `src/abi/abi.support.ts`: the
   generated `decodeResult` needs an `as any as Result` cast on its return to
   compile under TypeScript 5.9+. Reapply it after regenerating the ABI bindings.

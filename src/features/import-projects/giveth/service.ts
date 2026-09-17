@@ -1,6 +1,9 @@
 import { graphQLRequest } from "../../../helpers/request";
-import { GIVETH_API_URL } from "./constants";
+import { GIVETH_API_URL, givethAuthHeaders } from "./constants";
 
+// No auth headers here: this query runs against the public Giveth API, which
+// needs none. Sending the catalog's credentials would leak them to that host
+// whenever GIVETH_API_VERSION is unset while the pair is still configured.
 export const fetchGivethProjectsBatch = async (limit: number, skip: number) => {
   const res = await graphQLRequest(
     GIVETH_API_URL,
@@ -51,7 +54,8 @@ export const fetchGivethCatalogBatch = async (
         projects { id title image slug description creationDate: createdAt }
       }
     }`,
-    { take, afterId }
+    { take, afterId },
+    givethAuthHeaders()
   );
   if (res.errors?.length) {
     throw new Error(
