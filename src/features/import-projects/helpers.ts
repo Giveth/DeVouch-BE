@@ -39,6 +39,28 @@ export const recordOutcome = (
   return tally;
 };
 
+// Records one project into `tally`, converting any unexpected throw into a
+// "failed" outcome. Without this a throw escapes the batch helper and the whole
+// batch's accumulated tally is lost, so IMPORT_SUMMARY under-reports the
+// projects that did succeed before the failure.
+export const recordProject = async (
+  tally: ImportTally,
+  project: any,
+  sourceConfig: SourceConfig
+): Promise<ImportTally> => {
+  try {
+    recordOutcome(tally, await updateOrCreateProject(project, sourceConfig));
+  } catch (error: any) {
+    console.log(
+      `[${new Date().toISOString()}] - ERROR: Unexpected failure importing ${
+        sourceConfig.source
+      } project: ${error?.message ?? error}`
+    );
+    recordOutcome(tally, "failed");
+  }
+  return tally;
+};
+
 export const addTally = (into: ImportTally, from: ImportTally): ImportTally => {
   into.written += from.written;
   into.unchanged += from.unchanged;
@@ -152,11 +174,23 @@ export const updateOrCreateProject = async (
     return "failed";
   }
 
-  const existingProject = await dataSource
-    .getRepository(Project)
-    .createQueryBuilder("project")
-    .where("project.id = :id", { id })
-    .getOne();
+  // Read failures must become a recorded outcome, not a thrown exception: a
+  // throw here escapes the batch helper, so the tally it had accumulated for
+  // the rest of the batch is discarded and IMPORT_SUMMARY under-reports the
+  // projects that did succeed.
+  let existingProject: Project | null;
+  try {
+    existingProject = await dataSource
+      .getRepository(Project)
+      .createQueryBuilder("project")
+      .where("project.id = :id", { id })
+      .getOne();
+  } catch (error: any) {
+    console.log(
+      `[${new Date().toISOString()}] - ERROR: Failed to read project. Project ID: ${id}, Error: ${error.message}`
+    );
+    return "failed";
+  }
 
   const title = project[titleField];
   const description = project[descriptionField];

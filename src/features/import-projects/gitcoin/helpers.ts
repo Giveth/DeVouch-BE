@@ -1,5 +1,5 @@
 import type { GitcoinProjectInfo } from "./type";
-import { emptyTally, recordOutcome, updateOrCreateProject } from "../helpers";
+import { emptyTally, recordProject } from "../helpers";
 import { ImportTally } from "../types";
 import { IPFS_GATEWAY, gitcoinSourceConfig } from "./constants";
 import Showdown from "showdown";
@@ -39,10 +39,7 @@ export const processProjectsBatch = async (
         ? new Date(project.metadata.createdAt).toISOString() // Convert to ISO 8601
         : null,
     };
-    recordOutcome(
-      tally,
-      await updateOrCreateProject(processedProject, gitcoinSourceConfig)
-    );
+    await recordProject(tally, processedProject, gitcoinSourceConfig);
   }
   return tally;
 };

@@ -1,4 +1,4 @@
-import { emptyTally, recordOutcome, updateOrCreateProject } from "../helpers";
+import { emptyTally, recordProject } from "../helpers";
 import { ImportTally } from "../types";
 import { rfSourceConfig } from "./constants";
 import { RfProjectInfo } from "./type";
@@ -23,7 +23,7 @@ export const saveBatchProjects = async (
   const tally = emptyTally();
   for (const _project of projects) {
     const project = processProject(_project, round);
-    recordOutcome(tally, await updateOrCreateProject(project, rfSourceConfig));
+    await recordProject(tally, project, rfSourceConfig);
   }
   return tally;
 };

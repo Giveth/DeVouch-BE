@@ -2,8 +2,7 @@ import {
   abortImport,
   emptyTally,
   finishImport,
-  recordOutcome,
-  updateOrCreateProject,
+  recordProject,
 } from "../helpers";
 import { ImportResult, ImportTally } from "../types";
 import { rlSourceConfig } from "./constants";
@@ -33,10 +32,7 @@ export const fetchAndProcessRlProjects = async (
         rfRound: round,
       };
 
-      recordOutcome(
-        tally,
-        await updateOrCreateProject(processedProject, rlSourceConfig)
-      );
+      await recordProject(tally, processedProject, rlSourceConfig);
     }
 
     // After processing all new projects, handle projects not in the new dataset for the current round

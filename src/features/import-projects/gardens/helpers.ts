@@ -1,5 +1,5 @@
 import type { GardenProjectInfo } from "./type";
-import { emptyTally, recordOutcome, updateOrCreateProject } from "../helpers";
+import { emptyTally, recordProject } from "../helpers";
 import { ImportTally } from "../types";
 import {
   GARDEN_IMAGE_CID,
@@ -69,10 +69,7 @@ export const processProjectsBatch = async (
         : undefined,
       creationDate: null,
     };
-    recordOutcome(
-      tally,
-      await updateOrCreateProject(processedProject, gardensSourceConfig)
-    );
+    await recordProject(tally, processedProject, gardensSourceConfig);
   }
   return tally;
 };

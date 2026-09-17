@@ -1,6 +1,6 @@
 import { getDataSource } from "../../../helpers/db";
 import { type GivethProjectInfo } from "./type";
-import { emptyTally, recordOutcome, updateOrCreateProject } from "../helpers";
+import { emptyTally, recordProject } from "../helpers";
 import { ImportTally } from "../types";
 import { givethSourceConfig } from "./constants";
 
@@ -20,10 +20,7 @@ export const processProjectsBatch = async (
       ...project,
       url: generateGivethUrl(project),
     };
-    recordOutcome(
-      tally,
-      await updateOrCreateProject(processedProject, givethSourceConfig)
-    );
+    await recordProject(tally, processedProject, givethSourceConfig);
   }
   return tally;
 };
