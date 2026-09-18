@@ -166,8 +166,18 @@ The project uses GitHub Actions for continuous integration. Pull requests are au
   One difference remains worth confirming per instance: the legacy query passes
   `includeUnlisted: true` and the catalog query has no equivalent argument, so
   the two can import different project sets. The `creationDate: createdAt` alias
-  is verified - a live catalog walk returns it as the ISO timestamp
-  `givethSourceConfig.sourceCreatedAtField` expects.
+  and the ascending-id ordering were checked by hand, not by the test suite: on
+  2026-09-17 a full walk through `fetchGivethCatalogBatch` and
+  `nextCatalogCursor` against a local impact-graph at
+  `http://localhost:4000/graphql` (HTTP Basic, `devouchProjectCatalog` present)
+  returned 3,942 projects over 79 pages with strictly ascending ids, no
+  duplicates, and `creationDate` as an ISO timestamp such as
+  `2016-01-01T01:30:00.000Z`. Nothing in CI exercises the live query -
+  `src/test/givethCursor.test.ts` covers the cursor guards only - and neither
+  the public API nor `https://core.v6-staging.giveth.io/graphql` exposes the
+  query, so that result cannot currently be reproduced against a shared
+  endpoint. Re-check both properties against whichever instance you point
+  `GIVETH_API_URL` at before enabling v6 there.
 - `sqd typegen` reintroduces a type error in `src/abi/abi.support.ts`: the
   generated `decodeResult` needs an `as any as Result` cast on its return to
   compile under TypeScript 5.9+. Reapply it after regenerating the ABI bindings.
