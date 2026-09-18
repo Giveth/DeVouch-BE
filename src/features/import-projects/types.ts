@@ -1,3 +1,34 @@
+// What `updateOrCreateProject` actually did. A boolean could not distinguish
+// "wrote a row" from "inspected an unchanged row and issued no SQL", which made
+// any count built on it unusable for detecting a database that accepts reads
+// but rejects writes.
+export type ProjectImportOutcome =
+  "created" | "updated" | "unchanged" | "skipped" | "failed";
+
+export interface ImportTally {
+  /** Rows actually inserted or updated. */
+  written: number;
+  /** Rows already up to date - inspected, no SQL issued. */
+  unchanged: number;
+  /** Rows deliberately not imported (e.g. prelimResult "Remove"). */
+  skipped: number;
+  /** Rows whose write was attempted and failed. */
+  failed: number;
+}
+
+export interface ImportResult extends ImportTally {
+  source: string;
+  ok: boolean;
+  error?: string;
+  /**
+   * Why a source did no work despite succeeding - e.g. it is not configured in
+   * this environment. Distinct from `error`: a run carrying only a `note` is
+   * still `ok`, so alerting keyed on `ok` does not fire on a deliberate
+   * non-configuration.
+   */
+  note?: string;
+}
+
 export interface SourceConfig {
   source: string;
   idField: string;

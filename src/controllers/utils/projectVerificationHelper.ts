@@ -2,7 +2,7 @@ import { DataHandlerContext, Log } from "@subsquid/evm-processor";
 import { Store } from "@subsquid/typeorm-store";
 import { ProjectVerificationAttestation } from "./types";
 import { SchemaDecodedItem } from "@ethereum-attestation-service/eas-sdk";
-import { SafeParseReturnType } from "zod";
+import { ZodSafeParseResult } from "zod";
 import { Attestor, AttestorOrganisation, Organisation } from "../../model";
 
 export const checkProjectAttestation = async (
@@ -43,7 +43,7 @@ export const checkProjectAttestation = async (
 
 export const parseAttestationData = (
   decodedData: SchemaDecodedItem[]
-): SafeParseReturnType<any, ProjectVerificationAttestation> => {
+): ZodSafeParseResult<ProjectVerificationAttestation> => {
   let vouch: boolean;
   let projectSource: string;
   let projectId: string;

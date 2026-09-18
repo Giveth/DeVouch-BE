@@ -57,7 +57,7 @@ export class Func<Args extends any[], FieldArgs, Result> {
 
     decodeResult(output: ethers.BytesLike): Result {
         const decoded = this.abi.decodeFunctionResult(this.fragment, output)
-        return decoded.length > 1 ? decoded : decoded[0]
+        return (decoded.length > 1 ? decoded : decoded[0]) as any as Result
     }
 
     tryDecodeResult(output: ethers.BytesLike): Result | undefined {

@@ -1,0 +1,76 @@
+name: devouch-local
+
+x-backend: &backend
+  image: devouch-local:latest
+  build:
+    context: .
+    dockerfile: Dockerfile
+  env_file: .env
+  # Makes host.docker.internal resolve on Docker Engine for Linux, which does
+  # not inject it the way Docker Desktop does. Required by GIVETH_API_URL below.
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
+  environment:
+    DB_HOST: db
+    DB_PORT: "5432"
+    DB_NAME: squid
+    DB_USER: postgres
+    DB_PASS: postgres
+    DB_PASSWORD: postgres
+    GQL_PORT: "4350"
+    # Local Giveth V6 (impact-graph on :4000). .env's GIVETH_API_URL is
+    # deliberately overridden, not inherited: it points at localhost, which
+    # inside a container means the container itself. Interpolating it here would
+    # reintroduce that broken value, so the override is keyed off a distinct
+    # name - set LOCAL_GIVETH_API_URL to retarget without editing this file.
+    GIVETH_API_URL: ${LOCAL_GIVETH_API_URL:-http://host.docker.internal:4000/graphql}
+    GIVETH_API_VERSION: "6"
+    # Pinned together: SQD_RPC_ONLY makes the RPC the only data source, and
+    # SQUID_NETWORK selects the sepolia EAS address and start block, so the
+    # endpoint must be a sepolia one. Leaving RPC_ENDPOINT to .env would index
+    # whichever chain that file points at - usually optimism-mainnet - against
+    # sepolia contract addresses, finding nothing.
+    SQUID_NETWORK: eth-sepolia
+    RPC_ENDPOINT: https://ethereum-sepolia-rpc.publicnode.com
+    SQD_RPC_ONLY: "true"
+    RPC_DATA_INGESTION_DISABLED: "false"
+
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: squid
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - local-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d squid"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  api:
+    <<: *backend
+    command: ["sh", "-c", "sqd migration:apply && sqd serve"]
+    ports:
+      - "127.0.0.1:4350:4350"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4350/graphql', {method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({query:'{ __typename }'})}).then(async r=>{if(!r.ok || (await r.json()).errors) process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    depends_on:
+      db:
+        condition: service_healthy
+
+  processor:
+    <<: *backend
+    command: ["sqd", "process:prod"]
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  local-db:

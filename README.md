@@ -61,7 +61,7 @@ After projects and valid attestors are imported, attestors can start attesting t
 ## 3. Getting Started
 
 ### Prerequisites
-- Node.js (v20 or higher)
+- Node.js (v22 or higher)
 - Docker and Docker Compose
 - PostgreSQL
 - Git
@@ -88,6 +88,14 @@ Below are the required environment variables. Please refer to `.env.template` fo
 - `RPC_ENDPOINT`: Ethereum node endpoint
 - `SQUID_NETWORK`: Network to use for Squid (e.g., `eth-sepolia`, `optimism-mainnet`)
 - `IMPORT_PROJECT_CRON_SCHEDULE`: Cron schedule for project import
+- `SQD_API_KEY`: Subsquid Network Gateway API key (https://portal.sqd.dev)
+- `SQD_RPC_ONLY`: set to `"true"` to skip the Subsquid Network Gateway and index
+  from `RPC_ENDPOINT` only. Unset (the default) uses the gateway.
+- `GIVETH_API_VERSION`: set to `"6"` to import Giveth projects through the
+  keyset-paginated `devouchProjectCatalog` query. Unset (the default) uses the
+  legacy `allProjects` query.
+- `GIVETH_API_USERNAME` / `GIVETH_API_PASSWORD`: HTTP Basic credentials for the
+  `devouchProjectCatalog` query. Required with `GIVETH_API_VERSION=6`.
 - Various API endpoints for integrations (GIVETH_API_URL, RPGF3_API_URL, etc.)
 - IPFS gateway configuration
 
@@ -140,6 +148,44 @@ The project uses GitHub Actions for continuous integration. Pull requests are au
 - Database connection issues: Check PostgreSQL container status and credentials.
 - RPC endpoint errors: Verify RPC endpoint availability and API keys.
 - GraphQL endpoint not responding: Check port configuration and server logs.
+- `GIVETH_API_VERSION=6` does not work against the public Giveth API yet. It
+  selects the keyset-paginated `devouchProjectCatalog` query, which that API does
+  not expose (verified by introspecting
+  `https://mainnet.serve.giveth.io/graphql`), so the import fails on the first
+  page. Leave the variable unset to use the legacy `allProjects` query until the
+  impact-graph release adding the query ships. `compose.local.yaml` is the
+  deliberate exception: it sets `GIVETH_API_VERSION: "6"` and points
+  `GIVETH_API_URL` at an impact-graph on `:4000`, so that stack needs one running
+  locally or every cron cycle logs "Giveth import aborted after 0 projects".
+  The catalog query is also authenticated: set `GIVETH_API_USERNAME` and
+  `GIVETH_API_PASSWORD` for HTTP Basic. They are only sent when both are set and
+  only on the catalog query, so the legacy `allProjects` path never transmits
+  them to the public API even when the pair stays configured. An unauthenticated
+  request returns HTTP 200 with an `UNAUTHENTICATED` GraphQL error rather than a
+  401, so the failure surfaces from the response body and not the status code.
+  One difference remains worth confirming per instance: the legacy query passes
+  `includeUnlisted: true` and the catalog query has no equivalent argument, so
+  the two can import different project sets. The `creationDate: createdAt` alias
+  and the ascending-id ordering were checked by hand, not by the test suite: on
+  2026-09-17 a full walk through `fetchGivethCatalogBatch` and
+  `nextCatalogCursor` against a local impact-graph at
+  `http://localhost:4000/graphql` (HTTP Basic, `devouchProjectCatalog` present)
+  returned 3,942 projects over 79 pages with strictly ascending ids, no
+  duplicates, and `creationDate` as an ISO timestamp such as
+  `2016-01-01T01:30:00.000Z`. Nothing in CI exercises the live query -
+  `src/test/givethCursor.test.ts` covers the cursor guards only - and neither
+  the public API nor `https://core.v6-staging.giveth.io/graphql` exposes the
+  query, so that result cannot currently be reproduced against a shared
+  endpoint. Re-check both properties against whichever instance you point
+  `GIVETH_API_URL` at before enabling v6 there.
+- `sqd typegen` reintroduces a type error in `src/abi/abi.support.ts`: the
+  generated `decodeResult` needs an `as any as Result` cast on its return to
+  compile under TypeScript 5.9+. Reapply it after regenerating the ABI bindings.
+- `sqd codegen` rewrites `src/model/generated/` against the newer
+  `@subsquid/typeorm-codegen`, which names indexes explicitly. The live database
+  uses TypeORM's auto-generated index names, so regenerating will make the next
+  `sqd migration:generate` emit index renames. Treat that as a deliberate,
+  separate migration rather than a side effect of codegen.
 
 ### Logs and Debugging
 - Enable debug mode by setting `SQD_DEBUG=*` in the environment.

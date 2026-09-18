@@ -2,8 +2,20 @@ import { AGORA_API_KEY } from "../../../constants";
 import { RF_API_URL } from "./constants";
 import { saveBatchProjects } from "./helpers";
 import { RfApiResponse, RfProjectInfo } from "./type";
+import { ImportResult, ImportTally } from "../types";
+import {
+  abortImport,
+  addTally,
+  emptyTally,
+  finishImport,
+  skipImport,
+} from "../helpers";
 
-export const fetchRFProjectsByRound = async (round: number) => {
+export const fetchRFProjectsByRound = async (
+  round: number
+): Promise<ImportResult> => {
+  const source = `rf-round-${round}`;
+  const tally: ImportTally = emptyTally();
   let offset = 0;
   const limit = 10;
   let hasNext = true;
@@ -13,8 +25,11 @@ export const fetchRFProjectsByRound = async (round: number) => {
   );
 
   if (!AGORA_API_KEY) {
-    console.log(`[${new Date().toISOString()}] - AGORA_API_KEY is not set`);
-    return;
+    // Missing configuration, not a failed import. Reporting it as failed would
+    // hold the run-level `ok` false on every cycle in any environment that has
+    // simply not enabled Agora, which is exactly the always-red signal the
+    // per-source reporting exists to avoid.
+    return skipImport(source, "AGORA_API_KEY is not set");
   }
 
   try {
@@ -39,15 +54,14 @@ export const fetchRFProjectsByRound = async (round: number) => {
 
       const res: RfApiResponse = await response.json();
 
-      await saveBatchProjects(res.data, round);
+      addTally(tally, await saveBatchProjects(res.data, round));
 
       hasNext = res.meta.has_next;
       offset = res.meta.next_offset;
     }
-  } catch (error) {
-    console.log(
-      `[${new Date().toISOString()}] - Error fetching projects for round: ${round} at offset: ${offset}`,
-      error
-    );
+
+    return finishImport(source, tally);
+  } catch (error: any) {
+    return abortImport(source, tally, error);
   }
 };
