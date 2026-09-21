@@ -91,12 +91,13 @@ Below are the required environment variables. Please refer to `.env.template` fo
 - `SQD_API_KEY`: Subsquid Network Gateway API key (https://portal.sqd.dev)
 - `SQD_RPC_ONLY`: set to `"true"` to skip the Subsquid Network Gateway and index
   from `RPC_ENDPOINT` only. Unset (the default) uses the gateway.
-- `GIVETH_API_VERSION`: set to `"6"` to import Giveth projects through the
-  keyset-paginated `devouchProjectCatalog` query. Unset (the default) uses the
-  legacy `allProjects` query.
+- `GIVETH_API_URL`: Giveth V6 core GraphQL endpoint. Giveth projects are
+  imported only from its keyset-paginated `devouchProjectCatalog` query; there
+  is no V5 fallback and no default. Unset, together with the credentials, the
+  Giveth source is skipped.
 - `GIVETH_API_USERNAME` / `GIVETH_API_PASSWORD`: HTTP Basic credentials for the
-  `devouchProjectCatalog` query. Required with `GIVETH_API_VERSION=6`.
-- Various API endpoints for integrations (GIVETH_API_URL, RPGF3_API_URL, etc.)
+  `devouchProjectCatalog` query. Required together with `GIVETH_API_URL`.
+- Various API endpoints for other integrations (RPGF3_API_URL, etc.)
 - IPFS gateway configuration
 
 ## 4. Usage Instructions
@@ -148,36 +149,34 @@ The project uses GitHub Actions for continuous integration. Pull requests are au
 - Database connection issues: Check PostgreSQL container status and credentials.
 - RPC endpoint errors: Verify RPC endpoint availability and API keys.
 - GraphQL endpoint not responding: Check port configuration and server logs.
-- `GIVETH_API_VERSION=6` does not work against the public Giveth API yet. It
-  selects the keyset-paginated `devouchProjectCatalog` query, which that API does
-  not expose (verified by introspecting
-  `https://mainnet.serve.giveth.io/graphql`), so the import fails on the first
-  page. Leave the variable unset to use the legacy `allProjects` query until the
-  impact-graph release adding the query ships. `compose.local.yaml` is the
-  deliberate exception: it sets `GIVETH_API_VERSION: "6"` and points
-  `GIVETH_API_URL` at an impact-graph on `:4000`, so that stack needs one running
-  locally or every cron cycle logs "Giveth import aborted after 0 projects".
-  The catalog query is also authenticated: set `GIVETH_API_USERNAME` and
-  `GIVETH_API_PASSWORD` for HTTP Basic. They are only sent when both are set and
-  only on the catalog query, so the legacy `allProjects` path never transmits
-  them to the public API even when the pair stays configured. An unauthenticated
-  request returns HTTP 200 with an `UNAUTHENTICATED` GraphQL error rather than a
-  401, so the failure surfaces from the response body and not the status code.
-  One difference remains worth confirming per instance: the legacy query passes
-  `includeUnlisted: true` and the catalog query has no equivalent argument, so
-  the two can import different project sets. The `creationDate: createdAt` alias
-  and the ascending-id ordering were checked by hand, not by the test suite: on
-  2026-09-17 a full walk through `fetchGivethCatalogBatch` and
-  `nextCatalogCursor` against a local impact-graph at
-  `http://localhost:4000/graphql` (HTTP Basic, `devouchProjectCatalog` present)
-  returned 3,942 projects over 79 pages with strictly ascending ids, no
-  duplicates, and `creationDate` as an ISO timestamp such as
-  `2016-01-01T01:30:00.000Z`. Nothing in CI exercises the live query -
-  `src/test/givethCursor.test.ts` covers the cursor guards only - and neither
-  the public API nor `https://core.v6-staging.giveth.io/graphql` exposes the
-  query, so that result cannot currently be reproduced against a shared
-  endpoint. Re-check both properties against whichever instance you point
-  `GIVETH_API_URL` at before enabling v6 there.
+- Giveth import reports `Giveth V6 catalog is not configured: missing ...`.
+  Giveth projects come only from V6's `devouchProjectCatalog` query (#189), so
+  `GIVETH_API_URL`, `GIVETH_API_USERNAME` and `GIVETH_API_PASSWORD` are set
+  together or not at all: with none set the source is skipped (`IMPORT_SUMMARY`
+  shows `giveth` `ok: true` with a `note`), with some set the import aborts. The
+  import never falls back to the legacy V5 `allProjects` query, and a
+  `GIVETH_API_URL` still pointing at the old V5 default
+  (`mainnet.serve.giveth.io`) is refused before any request so the credentials
+  are never sent there. The credentials are the `DEVOUCH_USER` / `DEVOUCH_PASS`
+  values configured in that V6 instance's AdminJS global configuration. An
+  unauthenticated or wrongly authenticated request returns HTTP 200 with an
+  `UNAUTHENTICATED` GraphQL error rather than a 401, so the failure surfaces
+  from the response body and not the status code. Not every V6 deployment
+  exposes `devouchProjectCatalog` yet; against one that does not, the import
+  aborts with "Cannot query field" on the first page. In `compose.local.yaml`
+  the source is opt-in: set `LOCAL_GIVETH_API_URL` (for a V6 core on the host,
+  `http://host.docker.internal:4000/graphql`) together with the two credentials
+  in `.env`; with nothing set the source is skipped rather than aborting every
+  cron cycle.
+  The catalog serves every ACTIVE project, publicly listed or not, keyset
+  paginated by ascending id; `id` is serialized as a string and is the same
+  public numeric id the project had on V5, so `giveth-<id>` keeps pointing at
+  the same DeVouch row and its attestations. `nextCatalogCursor` verifies the
+  ascending contract on every page and aborts the import rather than skipping
+  rows if it is violated (`src/test/givethCursor.test.ts`), and
+  `src/test/givethCatalog.test.ts` pins the fetcher's error handling against a
+  mocked request. Nothing in CI exercises the live query, so after pointing `GIVETH_API_URL` at a new
+  instance, check one run's `IMPORT_SUMMARY` line for `giveth` `ok: true`.
 - `sqd typegen` reintroduces a type error in `src/abi/abi.support.ts`: the
   generated `decodeResult` needs an `as any as Result` cast on its return to
   compile under TypeScript 5.9+. Reapply it after regenerating the ABI bindings.
