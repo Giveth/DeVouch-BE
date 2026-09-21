@@ -87,5 +87,12 @@ describe("givethCatalogConfig", () => {
         GIVETH_API_URL: "https://mainnet.serve.giveth.io/graphql",
       })()
     ).toThrow(/V5 public API/);
+    // With the DNS root label, which `URL.hostname` preserves.
+    expect(() =>
+      loadConfig({
+        ...configured,
+        GIVETH_API_URL: "https://mainnet.serve.giveth.io./graphql",
+      })()
+    ).toThrow(/V5 public API/);
   });
 });

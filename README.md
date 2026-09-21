@@ -163,10 +163,11 @@ The project uses GitHub Actions for continuous integration. Pull requests are au
   `UNAUTHENTICATED` GraphQL error rather than a 401, so the failure surfaces
   from the response body and not the status code. Not every V6 deployment
   exposes `devouchProjectCatalog` yet; against one that does not, the import
-  aborts with "Cannot query field" on the first page. `compose.local.yaml`
-  points `GIVETH_API_URL` at a V6 core on `:4000`, so that stack needs one
-  running locally or every cron cycle logs "Giveth import aborted after 0
-  projects".
+  aborts with "Cannot query field" on the first page. In `compose.local.yaml`
+  the source is opt-in: set `LOCAL_GIVETH_API_URL` (for a V6 core on the host,
+  `http://host.docker.internal:4000/graphql`) together with the two credentials
+  in `.env`; with nothing set the source is skipped rather than aborting every
+  cron cycle.
   The catalog serves every ACTIVE project, publicly listed or not, keyset
   paginated by ascending id; `id` is serialized as a string and is the same
   public numeric id the project had on V5, so `giveth-<id>` keeps pointing at

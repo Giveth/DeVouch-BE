@@ -7,7 +7,8 @@ x-backend: &backend
     dockerfile: Dockerfile
   env_file: .env
   # Makes host.docker.internal resolve on Docker Engine for Linux, which does
-  # not inject it the way Docker Desktop does. Required by GIVETH_API_URL below.
+  # not inject it the way Docker Desktop does. Needed when LOCAL_GIVETH_API_URL
+  # points at a V6 core running on the host.
   extra_hosts:
     - "host.docker.internal:host-gateway"
   environment:
@@ -18,12 +19,16 @@ x-backend: &backend
     DB_PASS: postgres
     DB_PASSWORD: postgres
     GQL_PORT: "4350"
-    # Local Giveth V6 core (on :4000). .env's GIVETH_API_URL is
-    # deliberately overridden, not inherited: it points at localhost, which
-    # inside a container means the container itself. Interpolating it here would
-    # reintroduce that broken value, so the override is keyed off a distinct
-    # name - set LOCAL_GIVETH_API_URL to retarget without editing this file.
-    GIVETH_API_URL: ${LOCAL_GIVETH_API_URL:-http://host.docker.internal:4000/graphql}
+    # Giveth V6 catalog is opt-in for this stack. The importer needs all three
+    # GIVETH_API_* set or none: partial configuration aborts every cron cycle.
+    # The credentials always come from .env, so the URL must not be forced here
+    # while they may be empty. Set LOCAL_GIVETH_API_URL (e.g.
+    # http://host.docker.internal:4000/graphql for a V6 core on the host -
+    # inside a container "localhost" is the container itself) together with
+    # GIVETH_API_USERNAME / GIVETH_API_PASSWORD in .env to enable it; otherwise
+    # .env's GIVETH_API_URL is inherited as-is, and with nothing set the source
+    # is skipped.
+    GIVETH_API_URL: ${LOCAL_GIVETH_API_URL:-${GIVETH_API_URL:-}}
     # Pinned together: SQD_RPC_ONLY makes the RPC the only data source, and
     # SQUID_NETWORK selects the sepolia EAS address and start block, so the
     # endpoint must be a sepolia one. Leaving RPC_ENDPOINT to .env would index

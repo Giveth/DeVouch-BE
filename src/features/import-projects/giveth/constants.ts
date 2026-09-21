@@ -45,7 +45,11 @@ export const givethCatalogConfig = (): GivethCatalogConfig | null => {
   }
 
   const url = GIVETH_API_URL!;
-  if (new URL(url).hostname === GIVETH_V5_PUBLIC_API_HOST) {
+  // A fully-qualified hostname may carry the DNS root label
+  // (`mainnet.serve.giveth.io.`); `URL` keeps it, so strip it or the check
+  // misses and the pair is sent to V5 before the catalog request fails.
+  const hostname = new URL(url).hostname.replace(/\.$/, "");
+  if (hostname === GIVETH_V5_PUBLIC_API_HOST) {
     throw new Error(
       `GIVETH_API_URL points at the V5 public API (${GIVETH_V5_PUBLIC_API_HOST}), which does not serve the catalog; set it to a Giveth V6 core endpoint`
     );
