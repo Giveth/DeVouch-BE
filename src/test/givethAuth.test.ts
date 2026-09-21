@@ -1,64 +1,91 @@
-// The header builder is read at module load, so each case needs a fresh module
+// The config is read at module load, so each case needs a fresh module
 // registry with the env already set.
-const loadHeaders = (env: Record<string, string | undefined>) => {
-  const previous = {
-    GIVETH_API_USERNAME: process.env.GIVETH_API_USERNAME,
-    GIVETH_API_PASSWORD: process.env.GIVETH_API_PASSWORD,
-  };
-  Object.assign(process.env, env);
+const GIVETH_ENV = [
+  "GIVETH_API_URL",
+  "GIVETH_API_USERNAME",
+  "GIVETH_API_PASSWORD",
+] as const;
+
+type Loaded =
+  (typeof import("../features/import-projects/giveth/constants"))["givethCatalogConfig"];
+
+const loadConfig = (env: Record<string, string | undefined>): Loaded => {
+  const previous = Object.fromEntries(
+    GIVETH_ENV.map((key) => [key, process.env[key]])
+  );
+  for (const key of GIVETH_ENV) delete process.env[key];
   for (const [key, value] of Object.entries(env)) {
-    if (value === undefined) delete process.env[key];
+    if (value !== undefined) process.env[key] = value;
   }
 
-  let headers: Record<string, string>;
+  let result: Loaded;
   jest.isolateModules(() => {
-    headers =
-      require("../features/import-projects/giveth/constants").givethAuthHeaders();
+    const {
+      givethCatalogConfig,
+    } = require("../features/import-projects/giveth/constants");
+    result = givethCatalogConfig;
   });
 
   // Restoring with Object.assign would write the string "undefined" for a key
-  // that was unset, leaving a truthy value behind for the next case.
+  // that was unset before the test.
   for (const [key, value] of Object.entries(previous)) {
     if (value === undefined) delete process.env[key];
     else process.env[key] = value;
   }
-  return headers!;
+  return result!;
 };
 
-describe("givethAuthHeaders", () => {
-  it("builds a Basic credential from username and password", () => {
-    const headers = loadHeaders({
-      GIVETH_API_USERNAME: "devouch-e2e-user",
-      GIVETH_API_PASSWORD: "devouch-e2e-pass",
-    });
+const configured = {
+  GIVETH_API_URL: "https://core.v6-staging.giveth.io/graphql",
+  GIVETH_API_USERNAME: "devouch-user",
+  GIVETH_API_PASSWORD: "devouch-pass",
+};
 
-    expect(headers).toEqual({
-      Authorization:
-        "Basic " +
-        Buffer.from("devouch-e2e-user:devouch-e2e-pass").toString("base64"),
+describe("givethCatalogConfig", () => {
+  it("returns the url and a Basic credential from username and password", () => {
+    expect(loadConfig(configured)()).toEqual({
+      url: configured.GIVETH_API_URL,
+      headers: {
+        Authorization:
+          "Basic " +
+          Buffer.from("devouch-user:devouch-pass").toString("base64"),
+      },
     });
   });
 
-  // Guards against sending credentials to the public Giveth API, which needs
-  // none: a half-configured pair must send nothing rather than a broken header.
-  it("sends nothing when either half is missing", () => {
-    expect(
-      loadHeaders({
-        GIVETH_API_USERNAME: "user-only",
-        GIVETH_API_PASSWORD: undefined,
-      })
-    ).toEqual({});
-    expect(
-      loadHeaders({
-        GIVETH_API_USERNAME: undefined,
-        GIVETH_API_PASSWORD: "pass-only",
-      })
-    ).toEqual({});
-    expect(
-      loadHeaders({
-        GIVETH_API_USERNAME: undefined,
-        GIVETH_API_PASSWORD: undefined,
-      })
-    ).toEqual({});
+  // Nothing set means the source is not enabled in this environment; the
+  // importer reports that via skipImport rather than failing every cron run.
+  it("returns null when none of the variables are set", () => {
+    expect(loadConfig({})()).toBeNull();
+  });
+
+  // The V6 catalog is the only Giveth source (#189) and it is always
+  // authenticated, so a partial configuration must fail the import with a
+  // message naming what is missing - not send an anonymous request that comes
+  // back UNAUTHENTICATED, and never fall back to the V5 public API.
+  it("throws naming every missing variable when partially configured", () => {
+    expect(() =>
+      loadConfig({ ...configured, GIVETH_API_PASSWORD: undefined })()
+    ).toThrow(/missing GIVETH_API_PASSWORD$/);
+    expect(() =>
+      loadConfig({ ...configured, GIVETH_API_USERNAME: undefined })()
+    ).toThrow(/missing GIVETH_API_USERNAME$/);
+    expect(() =>
+      loadConfig({ ...configured, GIVETH_API_URL: undefined })()
+    ).toThrow(/missing GIVETH_API_URL$/);
+    expect(() => loadConfig({ GIVETH_API_USERNAME: "user-only" })()).toThrow(
+      /missing GIVETH_API_URL, GIVETH_API_PASSWORD$/
+    );
+  });
+
+  // Guards against leaking the credentials to the public Giveth API: an .env
+  // that still carries the old default URL must fail before any request.
+  it("refuses the V5 public API host", () => {
+    expect(() =>
+      loadConfig({
+        ...configured,
+        GIVETH_API_URL: "https://mainnet.serve.giveth.io/graphql",
+      })()
+    ).toThrow(/V5 public API/);
   });
 });
