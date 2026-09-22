@@ -52,11 +52,30 @@ describe("resolveGivethImageUrl", () => {
     );
   });
 
+  it("keeps a value the URL parser rejects unchanged", () => {
+    expect(resolveGivethImageUrl("https://", STAGING)).toBe("https://");
+  });
+
   it("keeps missing images as null", () => {
     expect(resolveGivethImageUrl(null, STAGING)).toBeNull();
     expect(resolveGivethImageUrl(undefined, STAGING)).toBeNull();
     expect(resolveGivethImageUrl("", STAGING)).toBeNull();
     expect(resolveGivethImageUrl("   ", STAGING)).toBeNull();
+  });
+
+  it("refuses a GIVETH_IMAGE_BASE_URL without a scheme at load", () => {
+    const previous = process.env.GIVETH_IMAGE_BASE_URL;
+    process.env.GIVETH_IMAGE_BASE_URL = "qf.giveth.io";
+    try {
+      expect(() =>
+        jest.isolateModules(() => {
+          require("../features/import-projects/giveth/constants");
+        })
+      ).toThrow(/GIVETH_IMAGE_BASE_URL must be an absolute http\(s\) URL/);
+    } finally {
+      if (previous === undefined) delete process.env.GIVETH_IMAGE_BASE_URL;
+      else process.env.GIVETH_IMAGE_BASE_URL = previous;
+    }
   });
 
   it("uses the configured GIVETH_IMAGE_BASE_URL by default", () => {

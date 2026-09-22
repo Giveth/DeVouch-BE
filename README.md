@@ -101,7 +101,8 @@ Below are the required environment variables. Please refer to `.env.template` fo
   paths returned by the catalog (default project images such as
   `/images/defaultProjectImages/3.png`). Defaults to `https://qf.giveth.io`
   when `SQUID_NETWORK` is `optimism-mainnet` and `https://v6-staging.giveth.io`
-  otherwise; absolute image URLs are stored unchanged.
+  otherwise; must be an absolute http(s) URL. Absolute image URLs are stored
+  unchanged.
 - Various API endpoints for other integrations (RPGF3_API_URL, etc.)
 - IPFS gateway configuration
 
