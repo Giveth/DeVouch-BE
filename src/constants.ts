@@ -3,7 +3,7 @@ import { assertNotNull } from "@subsquid/evm-processor";
 
 const SQUID_NETWORK = process.env.SQUID_NETWORK || "eth-sepolia";
 
-const IS_PRODUCTION = SQUID_NETWORK === "optimism-mainnet";
+export const IS_PRODUCTION = SQUID_NETWORK === "optimism-mainnet";
 
 export const EAS_CONTRACT_ADDRESS = assertNotNull(
   IS_PRODUCTION

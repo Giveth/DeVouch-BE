@@ -1,10 +1,21 @@
 import { SourceConfig } from "../types";
+import { IS_PRODUCTION } from "../../../constants";
 
 // Giveth V6 core GraphQL endpoint. No default on purpose: the only Giveth
 // source is the V6 `devouchProjectCatalog` query (#189), and the V5 public API
 // this used to fall back to does not expose it. Falling back would silently
 // re-introduce V5 as a source, so an unset URL disables the source instead.
 export const GIVETH_API_URL = process.env.GIVETH_API_URL;
+
+// The catalog serves default project images as paths relative to the Giveth
+// frontend (`/images/defaultProjectImages/3.png`), not as absolute URLs. The
+// frontend host cannot be derived from GIVETH_API_URL (production's core API
+// does not live under the frontend's hostname), so it is picked by deployment
+// and can be overridden explicitly per environment.
+export const GIVETH_IMAGE_BASE_URL = (
+  process.env.GIVETH_IMAGE_BASE_URL ||
+  (IS_PRODUCTION ? "https://qf.giveth.io" : "https://v6-staging.giveth.io")
+).replace(/\/+$/, "");
 
 // `devouchProjectCatalog` accepts 1-100 (MAX_PAGE_SIZE on the V6 side).
 export const GIVETH_API_LIMIT = 50;

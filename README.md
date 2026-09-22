@@ -97,6 +97,11 @@ Below are the required environment variables. Please refer to `.env.template` fo
   Giveth source is skipped.
 - `GIVETH_API_USERNAME` / `GIVETH_API_PASSWORD`: HTTP Basic credentials for the
   `devouchProjectCatalog` query. Required together with `GIVETH_API_URL`.
+- `GIVETH_IMAGE_BASE_URL`: Giveth frontend origin prepended to relative image
+  paths returned by the catalog (default project images such as
+  `/images/defaultProjectImages/3.png`). Defaults to `https://qf.giveth.io`
+  when `SQUID_NETWORK` is `optimism-mainnet` and `https://v6-staging.giveth.io`
+  otherwise; absolute image URLs are stored unchanged.
 - Various API endpoints for other integrations (RPGF3_API_URL, etc.)
 - IPFS gateway configuration
 
