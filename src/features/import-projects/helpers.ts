@@ -10,6 +10,15 @@ import {
   SourceConfig,
 } from "./types";
 
+// The primary key an imported project is stored under. Shared with the
+// reconciliation pass on purpose: it compares stored ids against ids derived
+// from a catalog page, so the two must be built the same way - a drift between
+// them would make every project of the source look missing.
+export const projectRowId = (
+  source: string,
+  sourceProjectId: string | number
+): string => `${source}-${String(sourceProjectId).toLowerCase()}`;
+
 export const emptyTally = (): ImportTally => ({
   written: 0,
   unchanged: 0,
@@ -81,20 +90,25 @@ const describe = (tally: ImportTally): string =>
 // those are logged rather than thrown, so the tally is the only signal.
 export const finishImport = (
   source: string,
-  tally: ImportTally
+  tally: ImportTally,
+  extra: { deactivated?: number } = {}
 ): ImportResult => {
+  const suffix = extra.deactivated
+    ? `, ${extra.deactivated} hidden as no longer listed by the source`
+    : "";
+
   if (tally.failed > 0) {
     const error = `${tally.failed} project(s) failed to persist`;
     console.log(
       `[${new Date().toISOString()}] - ERROR: ${source} import incomplete: ${describe(
         tally
-      )}`
+      )}${suffix}`
     );
-    return { source, ok: false, ...tally, error };
+    return { source, ok: false, ...tally, ...extra, error };
   }
 
-  console.log(`${source} import completed: ${describe(tally)}`);
-  return { source, ok: true, ...tally };
+  console.log(`${source} import completed: ${describe(tally)}${suffix}`);
+  return { source, ok: true, ...tally, ...extra };
 };
 
 // A source that is not configured in this environment did no work, but nothing
@@ -163,8 +177,27 @@ export const updateOrCreateProject = async (
     sourceCreatedAtField,
   } = sourceConfig;
 
-  const projectId = project[idField].toLowerCase();
-  const id = `${source}-${projectId}`;
+  // `String()` accepts anything, so a record whose id is missing or not a
+  // scalar would be persisted under a junk primary key (`gitcoin-undefined`,
+  // `source-[object object]`) and counted as a write. Reject it first: a record
+  // that cannot be addressed is a failed import, not a new project. The value
+  // is only trimmed for this check - the stored id keeps it verbatim, because
+  // the reconciliation pass derives ids from the catalog the same way.
+  const rawProjectId = project[idField];
+  const hasUsableId =
+    (typeof rawProjectId === "string" && rawProjectId.trim() !== "") ||
+    (typeof rawProjectId === "number" && Number.isFinite(rawProjectId));
+  if (!hasUsableId) {
+    console.log(
+      `[${new Date().toISOString()}] - ERROR: Failed to UPSERT project. Unusable ${source} project id: ${JSON.stringify(
+        rawProjectId ?? null
+      )}`
+    );
+    return "failed";
+  }
+
+  const projectId = String(rawProjectId).toLowerCase();
+  const id = projectRowId(source, projectId);
 
   const dataSource = await getDataSource();
   if (!dataSource) {
@@ -232,6 +265,10 @@ export const updateOrCreateProject = async (
     if (rfRound && !existingProject.rfRounds?.some((rfr) => rfr === rfRound)) {
       changes.push(`rfRound added: "${rfRound}"`);
     }
+    // A project the source lists again must return to the listings. Without
+    // this the update below is never issued for a hidden project whose other
+    // fields are unchanged, so it would stay hidden forever after one absence.
+    if (!existingProject.imported) changes.push(`imported: false -> true`);
 
     if (changes.length === 0) {
       // Up to date: no SQL is issued, so this must not be counted as a write.

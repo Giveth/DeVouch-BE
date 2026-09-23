@@ -103,6 +103,14 @@ Below are the required environment variables. Please refer to `.env.template` fo
   when `SQUID_NETWORK` is `optimism-mainnet` and `https://v6-staging.giveth.io`
   otherwise; must be an absolute http(s) URL. Absolute image URLs are stored
   unchanged.
+- `GIVETH_MAX_DEACTIVATIONS_PER_RUN`: floor on how many Giveth projects one
+  import may hide (default `250`). It is the whole ceiling for a walk whose
+  completeness could not be confirmed against the catalog's `total`; a walk
+  that WAS confirmed complete may hide up to half the currently listed Giveth
+  projects, so an accumulated backlog clears itself without an operator sizing
+  it first. Either way a larger stale set aborts the run without hiding
+  anything, and raising this value raises both ceilings. Any value that is not
+  a positive integer is logged and ignored in favour of the default.
 - Various API endpoints for other integrations (RPGF3_API_URL, etc.)
 - IPFS gateway configuration
 
@@ -181,7 +189,38 @@ The project uses GitHub Actions for continuous integration. Pull requests are au
   ascending contract on every page and aborts the import rather than skipping
   rows if it is violated (`src/test/givethCursor.test.ts`), and
   `src/test/givethCatalog.test.ts` pins the fetcher's error handling against a
-  mocked request. Nothing in CI exercises the live query, so after pointing `GIVETH_API_URL` at a new
+  mocked request. The walk requests pages at `take: 100`, the maximum
+  `devouchProjectCatalog` accepts.
+  Because the catalog lists only ACTIVE projects, a stored Giveth project that
+  is absent from it has been deactivated or cancelled upstream (#190). After a
+  COMPLETE walk - and only then - the import clears `imported` on those rows in
+  one transaction, which drops them from the listings without deleting the
+  project or any attestation, vouch, flag or counter; a catalog that lists the
+  project again flips `imported` back on the next run. Any failed page,
+  malformed response or pagination violation aborts before reconciliation, and
+  a walk that completes with zero projects is refused rather than acted on.
+  A catalog that comes back SHORT rather than empty walks to completion with
+  real projects in it, so two independent guards cover it, both evaluated
+  before any row is written. The catalog's own `total` (selected on the first
+  request only - upstream resolves it lazily with a COUNT off the read replica,
+  so it is an estimate, never snapshot-consistent with the pages it arrives
+  beside) refuses a walk that collected fewer projects than `total` minus a
+  tolerance of 25 or 5%, whichever is larger; walking MORE than `total` is
+  normal and never refused, since a project deactivated mid-walk leaves the
+  count but not the page that already served it, and a missing or unusable
+  `total` skips the check rather than failing the run. Independently, a stale
+  set over the per-run ceiling aborts the run. The two are connected: a fixed
+  ceiling is a proxy for "the catalog may have come back short", so once
+  `total` has ruled that out directly the ceiling scales to half the listed
+  Giveth projects - which is what lets the first run clear a backlog of
+  long-cancelled projects (AC4) instead of refusing it every day until someone
+  raises the number by hand. Without that confirmation the ceiling stays at
+  `GIVETH_MAX_DEACTIVATIONS_PER_RUN` (default 250), and in neither regime may a
+  run blank most of the listings. Between them no outage can mass-hide
+  projects. `IMPORT_SUMMARY` reports the count as `deactivated`
+  on the `giveth` source; `src/test/givethReconcile.test.ts` covers the cases,
+  the ceiling and the tolerance arithmetic.
+  Nothing in CI exercises the live query, so after pointing `GIVETH_API_URL` at a new
   instance, check one run's `IMPORT_SUMMARY` line for `giveth` `ok: true`.
 - `sqd typegen` reintroduces a type error in `src/abi/abi.support.ts`: the
   generated `decodeResult` needs an `as any as Result` cast on its return to
