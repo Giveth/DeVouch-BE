@@ -49,27 +49,38 @@ export const resolveMaxDeactivationsPerRun = (
   return parsed;
 };
 
-// Tolerance for the catalog-total check below. `total` is a per-request COUNT
-// taken off Giveth's read replica while the pages come off the primary, so it
-// is an estimate of the catalog size at the start of the walk and nothing
-// stronger: projects legitimately activate and deactivate while pagination
-// runs. The absolute floor makes the check a deliberate no-op on small
-// catalogs - there the deactivation ceiling is the effective guard - and the
-// fraction scales it for large ones. Both are far below what real truncation
-// costs (a lost keyset predicate drops most of the catalog, not 5% of it).
+// How far the walk and the catalog-total may disagree, in either direction,
+// before the two are no longer describing the same catalog. `total` is a
+// per-request COUNT taken off Giveth's read replica while the pages come off
+// the primary, so it is an estimate of the catalog size at the start of the
+// walk and nothing stronger: projects legitimately activate and deactivate
+// while pagination runs, and the replica lags. The absolute floor makes the
+// check a deliberate no-op on small catalogs - there the deactivation ceiling
+// is the effective guard - and the fraction scales it for large ones. Both are
+// far below what real truncation costs (a lost keyset predicate drops most of
+// the catalog, not 5% of it).
 export const CATALOG_TOTAL_ABSOLUTE_SLACK = 25;
-export const CATALOG_TOTAL_SHORTFALL_FRACTION = 0.05;
+export const CATALOG_TOTAL_SLACK_FRACTION = 0.05;
 
 // Cross-checks the walk against the catalog's own count of ACTIVE projects and
 // reports whether the catalog can be considered COMPLETE. Throws on a walk that
 // ended far short of the count; returns false - without throwing - when there
 // is no count to check against, which is unverified rather than wrong.
 //
-// Only a shortfall is suspicious. Walking MORE projects than `total` reports is
-// normal and never an error: a project deactivated mid-walk was counted by the
-// page that served it and is gone from the count taken later, and replica lag
-// produces the same shape. Those projects are exactly what reconciliation is
-// for, so they must not abort it - and they still count as a complete walk.
+// A shortfall is the dangerous direction, but an overshoot is only harmless
+// while it is SMALL. Walking a few more projects than `total` reports is
+// ordinary: the count is taken at the start of the walk and off a lagging
+// replica, so a project that went ACTIVE while pagination ran is served by a
+// page without ever having been counted. Those projects are exactly what
+// reconciliation is for, so a small overshoot must not abort it.
+//
+// Walking FAR more than the total reports is a different thing: the count is
+// not describing this catalog at all (an upstream that reports 0, or counts a
+// narrower set than it serves). Letting that pass as confirmation would hand a
+// meaningless number the right to unlock the larger deactivation ceiling, so
+// such a total is reported as unusable - unverified, exactly like a missing
+// one, and for the same reason it is not thrown on: it costs the cross-check,
+// not the import.
 export const confirmCatalogWalkIsComplete = (
   source: string,
   walkedCount: number,
@@ -87,12 +98,20 @@ export const confirmCatalogWalkIsComplete = (
     return false;
   }
 
-  if (walkedCount >= catalogTotal) return true;
-
   const slack = Math.max(
     CATALOG_TOTAL_ABSOLUTE_SLACK,
-    Math.ceil(catalogTotal * CATALOG_TOTAL_SHORTFALL_FRACTION)
+    Math.ceil(catalogTotal * CATALOG_TOTAL_SLACK_FRACTION)
   );
+
+  if (walkedCount >= catalogTotal) {
+    const overshoot = walkedCount - catalogTotal;
+    if (overshoot <= slack) return true;
+    console.log(
+      `[${new Date().toISOString()}] - WARN: ${source} reconciliation: the walk collected ${walkedCount} project(s) but the catalog reported ${catalogTotal}, an overshoot of ${overshoot} over the ${slack} tolerated - the total is not describing this catalog, walk completeness unverified`
+    );
+    return false;
+  }
+
   const shortfall = catalogTotal - walkedCount;
   if (shortfall <= slack) return true;
 

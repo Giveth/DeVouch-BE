@@ -477,11 +477,28 @@ describe("confirmCatalogWalkIsComplete", () => {
     expect(confirmCatalogWalkIsComplete("giveth", 1000, 1000)).toBe(true);
   });
 
-  // Projects deactivated while pagination ran were served by an earlier page
-  // and are gone from a count taken later - the exact signal reconciliation
-  // exists to act on, so it must never be read as a fault.
-  test("confirms walking more projects than the total reports", () => {
-    expect(confirmCatalogWalkIsComplete("giveth", 1000, 940)).toBe(true);
+  // A project that went ACTIVE while pagination ran was served by a page
+  // without ever having been counted, and the replica the count comes from
+  // lags. A small overshoot is that race, not a fault.
+  test("confirms walking slightly more projects than the total reports", () => {
+    expect(confirmCatalogWalkIsComplete("giveth", 1000, 980)).toBe(true);
+    expect(
+      confirmCatalogWalkIsComplete(
+        "giveth",
+        100 + CATALOG_TOTAL_ABSOLUTE_SLACK,
+        100
+      )
+    ).toBe(true);
+  });
+
+  // The hole a bare `walkedCount >= catalogTotal` left open: a total that is
+  // not describing this catalog (an upstream reporting 0, or counting a
+  // narrower set than it serves) used to pass as confirmation and unlock the
+  // larger deactivation ceiling. It is unusable, so it is reported the same
+  // way a missing one is - unverified, without failing the import.
+  test("reports a total far below the walk as unusable, without throwing", () => {
+    expect(confirmCatalogWalkIsComplete("giveth", 5000, 0)).toBe(false);
+    expect(confirmCatalogWalkIsComplete("giveth", 1000, 900)).toBe(false);
   });
 
   test("confirms a walk through ordinary churn", () => {
@@ -628,6 +645,26 @@ describe("clearing the first-run backlog (AC4)", () => {
 
     expect(result.ok).toBe(false);
     expect(result.error).toContain("served no total");
+    expect((await reload("giveth-17432"))?.imported).toBe(true);
+    expect((await reload("giveth-17435"))?.imported).toBe(true);
+  });
+
+  // The same backlog again, with a total too far below the walk to confirm
+  // anything: the larger ceiling stays locked and the run is refused.
+  test("a total far below the walk does not unlock the larger ceiling", async () => {
+    process.env.GIVETH_MAX_DEACTIVATIONS_PER_RUN = "2";
+    for (const id of ["17432", "17433", "17434", "17435"]) {
+      await seedProject("giveth", id);
+    }
+    // 30 projects walked against a catalog claiming none: whatever that count
+    // is counting, it is not this catalog.
+    serveCatalogTotal(0);
+    servePages(catalogOf(30), []);
+
+    const result = await fetchAndProcessGivethProjects();
+
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain("no total to confirm the walk was complete");
     expect((await reload("giveth-17432"))?.imported).toBe(true);
     expect((await reload("giveth-17435"))?.imported).toBe(true);
   });
