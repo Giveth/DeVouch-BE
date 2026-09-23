@@ -10,3 +10,13 @@ export type GivethProjectInfo = {
   image: string | null;
   creationDate: string;
 };
+
+// One `devouchProjectCatalog` page. `total` is the catalog-wide count of ACTIVE
+// projects, and it is only ever populated on the request that asked for it
+// (the first page of a walk) - `null` everywhere else, and also when the field
+// came back missing or unusable. See `fetchGivethCatalogBatch` for why it is
+// not requested per page and why it cannot be treated as exact.
+export type GivethCatalogPage = {
+  projects: GivethProjectInfo[];
+  total: number | null;
+};

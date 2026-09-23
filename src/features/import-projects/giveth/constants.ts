@@ -35,8 +35,11 @@ export const GIVETH_IMAGE_BASE_URL = assertHttpUrl(
   "GIVETH_IMAGE_BASE_URL"
 );
 
-// `devouchProjectCatalog` accepts 1-100 (MAX_PAGE_SIZE on the V6 side).
-export const GIVETH_API_LIMIT = 50;
+// `devouchProjectCatalog` accepts 1-100 and defaults to MAX_PAGE_SIZE on the
+// V6 side, which rejects anything larger outright rather than clamping it.
+// Walk at the maximum: the page size only decides how many round trips the
+// walk costs, and V6's catalog rate limits are sized for a 100-row importer.
+export const GIVETH_API_LIMIT = 100;
 
 // The catalog is behind HTTP Basic auth because it enumerates ACTIVE unlisted
 // projects. Unauthenticated requests still return HTTP 200 with an

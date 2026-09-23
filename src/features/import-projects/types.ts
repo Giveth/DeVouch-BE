@@ -27,6 +27,13 @@ export interface ImportResult extends ImportTally {
    * non-configuration.
    */
   note?: string;
+  /**
+   * Rows hidden from the listings because the source's complete catalog no
+   * longer lists them. Only sources that reconcile report this; absent is not
+   * the same as 0 (a source that never hides anything vs. one that found
+   * nothing to hide).
+   */
+  deactivated?: number;
 }
 
 export interface SourceConfig {

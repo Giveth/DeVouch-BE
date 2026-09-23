@@ -47,6 +47,7 @@ export const task = async (): Promise<ImportResult[]> => {
           unchanged,
           skipped,
           failed: f,
+          deactivated,
           error,
           note,
         }) => ({
@@ -56,6 +57,10 @@ export const task = async (): Promise<ImportResult[]> => {
           unchanged,
           skipped,
           failed: f,
+          // Only reported by sources that reconcile against a complete
+          // catalog, so a missing key is "did not reconcile", not "hid
+          // nothing".
+          ...(deactivated === undefined ? {} : { deactivated }),
           ...(error ? { error } : {}),
           ...(note ? { note } : {}),
         })
