@@ -13,18 +13,22 @@ export const manageProjectRemovals = async (
   round: number // Pass the current round
 ) => {
   if (newList === null) {
-    console.log(
-      `[${new Date().toISOString()}] - ERROR: Failed to manage project removals. New list is null.`
+    throw new Error(
+      "Failed to manage project removals: new list is null - reconciliation did not run"
     );
-    return;
   }
+
+  // Each bulk step is attempted even if an earlier one failed, so a single bad
+  // step does not block the rest of the reconciliation. Failures are collected
+  // and thrown together at the end: resolving normally here would let the
+  // caller's finishImport report ok:true after incomplete reconciliation.
+  const failures: string[] = [];
   try {
     const dataSource = await getDataSource();
     if (!dataSource) {
-      console.log(
-        `[${new Date().toISOString()}] - ERROR: Failed to remove projects. Data source not found.`
+      throw new Error(
+        "Failed to remove projects: data source not found - reconciliation did not run"
       );
-      return;
     }
 
     const shouldKeepProjects = newList
@@ -109,6 +113,7 @@ export const manageProjectRemovals = async (
       console.log(
         `[ERROR]: One or more updates failed. Error: ${error.message}`
       );
+      failures.push(`rfRounds update: ${error.message}`);
     }
 
     // Bulk delete projects without attests
@@ -132,6 +137,9 @@ export const manageProjectRemovals = async (
           `[${new Date().toISOString()}] - ERROR: Failed to delete projects. Project IDs: ${projectIdsToDelete.join(
             ", "
           )}. Error: ${error.message}`
+        );
+        failures.push(
+          `delete of ${projectIdsToDelete.length} project(s): ${error.message}`
         );
       }
     }
@@ -160,11 +168,21 @@ export const manageProjectRemovals = async (
             ", "
           )}. Error: ${error.message}`
         );
+        failures.push(
+          `mark ${projectIdsToMakeUnImported.length} project(s) unimported: ${error.message}`
+        );
       }
     }
   } catch (error: any) {
     console.log(
       `[${new Date().toISOString()}] - ERROR: Failed to manage project removals. Error: ${error.message}`
+    );
+    throw error;
+  }
+
+  if (failures.length > 0) {
+    throw new Error(
+      `Project removal reconciliation incomplete: ${failures.join("; ")}`
     );
   }
 };

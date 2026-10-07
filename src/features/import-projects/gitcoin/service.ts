@@ -5,10 +5,9 @@ export const fetchGitcoinProjectsBatch = async (
   first: number,
   offset: number
 ) => {
-  try {
-    const res = await graphQLRequest(
-      GITCOIN_API_URL,
-      `query fetchProjects($first: Int = 10, $offset: Int = 10) {
+  const res = await graphQLRequest(
+    GITCOIN_API_URL,
+    `query fetchProjects($first: Int = 10, $offset: Int = 10) {
         projects(
           first: $first
           offset: $offset
@@ -27,15 +26,21 @@ export const fetchGitcoinProjectsBatch = async (
         }
       }
       `,
-      {
-        first,
-        offset,
-      }
-    );
+    {
+      first,
+      offset,
+    }
+  );
 
-    return res.data.projects;
-  } catch (error: any) {
-    console.log("error on fetchGitcoinProjectsBatch", error.message);
-    return [];
+  if (res.errors?.length) {
+    throw new Error(
+      res.errors.map((error: { message: string }) => error.message).join("; ")
+    );
   }
+  const projects = res.data?.projects;
+  // Never return [] on failure: the caller reads an empty page as end-of-data
+  // and would report a truncated import as a completed one.
+  if (!Array.isArray(projects))
+    throw new Error("Invalid Gitcoin projects response");
+  return projects;
 };

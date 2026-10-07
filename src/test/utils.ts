@@ -1,6 +1,11 @@
 import { Store } from "@subsquid/typeorm-store";
 import { createOrmConfig } from "@subsquid/typeorm-config";
-import { DataSource, EntityManager } from "typeorm";
+import {
+  DataSource,
+  EntityManager,
+  EntityTarget,
+  ObjectLiteral,
+} from "typeorm";
 import { DataHandlerContext } from "@subsquid/evm-processor";
 
 // import dotenv from "dotenv";
@@ -23,6 +28,16 @@ export async function getTestEntityManager(): Promise<EntityManager> {
     // await connection.runMigrations();
   }
   return connection.createEntityManager();
+}
+
+// TypeORM rejects empty criteria in `delete({})`, so issue an unfiltered
+// DELETE instead. `clear()` is not an option: it TRUNCATEs, which the foreign
+// keys pointing at these tables reject.
+export async function deleteAll(
+  em: EntityManager,
+  entity: EntityTarget<ObjectLiteral>
+) {
+  await em.createQueryBuilder().delete().from(entity).execute();
 }
 
 export async function closeConnection() {

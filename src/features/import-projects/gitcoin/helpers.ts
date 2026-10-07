@@ -1,5 +1,6 @@
 import type { GitcoinProjectInfo } from "./type";
-import { updateOrCreateProject } from "../helpers";
+import { emptyTally, recordProject } from "../helpers";
+import { ImportTally } from "../types";
 import { IPFS_GATEWAY, gitcoinSourceConfig } from "./constants";
 import Showdown from "showdown";
 
@@ -15,9 +16,13 @@ const convertIpfsHashToHttps = (hash: string) => {
 const converter = new Showdown.Converter();
 export const processProjectsBatch = async (
   projectsBatch: GitcoinProjectInfo[]
-) => {
+): Promise<ImportTally> => {
+  const tally = emptyTally();
   for (const project of projectsBatch) {
-    if (project.metadata?.type !== "project") continue;
+    if (project.metadata?.type !== "project") {
+      tally.skipped++;
+      continue;
+    }
     const description = project.metadata?.description;
     const processedProject = {
       id: project.id,
@@ -34,6 +39,7 @@ export const processProjectsBatch = async (
         ? new Date(project.metadata.createdAt).toISOString() // Convert to ISO 8601
         : null,
     };
-    await updateOrCreateProject(processedProject, gitcoinSourceConfig);
+    await recordProject(tally, processedProject, gitcoinSourceConfig);
   }
+  return tally;
 };

@@ -61,7 +61,7 @@ After projects and valid attestors are imported, attestors can start attesting t
 ## 3. Getting Started
 
 ### Prerequisites
-- Node.js (v20 or higher)
+- Node.js (v22 or higher)
 - Docker and Docker Compose
 - PostgreSQL
 - Git
@@ -88,7 +88,30 @@ Below are the required environment variables. Please refer to `.env.template` fo
 - `RPC_ENDPOINT`: Ethereum node endpoint
 - `SQUID_NETWORK`: Network to use for Squid (e.g., `eth-sepolia`, `optimism-mainnet`)
 - `IMPORT_PROJECT_CRON_SCHEDULE`: Cron schedule for project import
-- Various API endpoints for integrations (GIVETH_API_URL, RPGF3_API_URL, etc.)
+- `SQD_API_KEY`: Subsquid Network Gateway API key (https://portal.sqd.dev)
+- `SQD_RPC_ONLY`: set to `"true"` to skip the Subsquid Network Gateway and index
+  from `RPC_ENDPOINT` only. Unset (the default) uses the gateway.
+- `GIVETH_API_URL`: Giveth V6 core GraphQL endpoint. Giveth projects are
+  imported only from its keyset-paginated `devouchProjectCatalog` query; there
+  is no V5 fallback and no default. Unset, together with the credentials, the
+  Giveth source is skipped.
+- `GIVETH_API_USERNAME` / `GIVETH_API_PASSWORD`: HTTP Basic credentials for the
+  `devouchProjectCatalog` query. Required together with `GIVETH_API_URL`.
+- `GIVETH_IMAGE_BASE_URL`: Giveth frontend origin prepended to relative image
+  paths returned by the catalog (default project images such as
+  `/images/defaultProjectImages/3.png`). Defaults to `https://qf.giveth.io`
+  when `SQUID_NETWORK` is `optimism-mainnet` and `https://v6-staging.giveth.io`
+  otherwise; must be an absolute http(s) URL. Absolute image URLs are stored
+  unchanged.
+- `GIVETH_MAX_DEACTIVATIONS_PER_RUN`: floor on how many Giveth projects one
+  import may hide (default `250`). It is the whole ceiling for a walk whose
+  completeness could not be confirmed against the catalog's `total`; a walk
+  that WAS confirmed complete may hide up to half the currently listed Giveth
+  projects, so an accumulated backlog clears itself without an operator sizing
+  it first. Either way a larger stale set aborts the run without hiding
+  anything, and raising this value raises both ceilings. Any value that is not
+  a positive integer is logged and ignored in favour of the default.
+- Various API endpoints for other integrations (RPGF3_API_URL, etc.)
 - IPFS gateway configuration
 
 ## 4. Usage Instructions
@@ -140,6 +163,73 @@ The project uses GitHub Actions for continuous integration. Pull requests are au
 - Database connection issues: Check PostgreSQL container status and credentials.
 - RPC endpoint errors: Verify RPC endpoint availability and API keys.
 - GraphQL endpoint not responding: Check port configuration and server logs.
+- Giveth import reports `Giveth V6 catalog is not configured: missing ...`.
+  Giveth projects come only from V6's `devouchProjectCatalog` query (#189), so
+  `GIVETH_API_URL`, `GIVETH_API_USERNAME` and `GIVETH_API_PASSWORD` are set
+  together or not at all: with none set the source is skipped (`IMPORT_SUMMARY`
+  shows `giveth` `ok: true` with a `note`), with some set the import aborts. The
+  import never falls back to the legacy V5 `allProjects` query, and a
+  `GIVETH_API_URL` still pointing at the old V5 default
+  (`mainnet.serve.giveth.io`) is refused before any request so the credentials
+  are never sent there. The credentials are the `DEVOUCH_USER` / `DEVOUCH_PASS`
+  values configured in that V6 instance's AdminJS global configuration. An
+  unauthenticated or wrongly authenticated request returns HTTP 200 with an
+  `UNAUTHENTICATED` GraphQL error rather than a 401, so the failure surfaces
+  from the response body and not the status code. Not every V6 deployment
+  exposes `devouchProjectCatalog` yet; against one that does not, the import
+  aborts with "Cannot query field" on the first page. In `compose.local.yaml`
+  the source is opt-in: set `LOCAL_GIVETH_API_URL` (for a V6 core on the host,
+  `http://host.docker.internal:4000/graphql`) together with the two credentials
+  in `.env`; with nothing set the source is skipped rather than aborting every
+  cron cycle.
+  The catalog serves every ACTIVE project, publicly listed or not, keyset
+  paginated by ascending id; `id` is serialized as a string and is the same
+  public numeric id the project had on V5, so `giveth-<id>` keeps pointing at
+  the same DeVouch row and its attestations. `nextCatalogCursor` verifies the
+  ascending contract on every page and aborts the import rather than skipping
+  rows if it is violated (`src/test/givethCursor.test.ts`), and
+  `src/test/givethCatalog.test.ts` pins the fetcher's error handling against a
+  mocked request. The walk requests pages at `take: 100`, the maximum
+  `devouchProjectCatalog` accepts.
+  Because the catalog lists only ACTIVE projects, a stored Giveth project that
+  is absent from it has been deactivated or cancelled upstream (#190). After a
+  COMPLETE walk - and only then - the import clears `imported` on those rows in
+  one transaction, which drops them from the listings without deleting the
+  project or any attestation, vouch, flag or counter; a catalog that lists the
+  project again flips `imported` back on the next run. Any failed page,
+  malformed response or pagination violation aborts before reconciliation, and
+  a walk that completes with zero projects is refused rather than acted on.
+  A catalog that comes back SHORT rather than empty walks to completion with
+  real projects in it, so two independent guards cover it, both evaluated
+  before any row is written. The catalog's own `total` (selected on the first
+  request only - upstream resolves it lazily with a COUNT off the read replica,
+  so it is an estimate, never snapshot-consistent with the pages it arrives
+  beside) refuses a walk that collected fewer projects than `total` minus a
+  tolerance of 25 or 5%, whichever is larger; walking MORE than `total` is
+  normal and never refused, since a project deactivated mid-walk leaves the
+  count but not the page that already served it, and a missing or unusable
+  `total` skips the check rather than failing the run. Independently, a stale
+  set over the per-run ceiling aborts the run. The two are connected: a fixed
+  ceiling is a proxy for "the catalog may have come back short", so once
+  `total` has ruled that out directly the ceiling scales to half the listed
+  Giveth projects - which is what lets the first run clear a backlog of
+  long-cancelled projects (AC4) instead of refusing it every day until someone
+  raises the number by hand. Without that confirmation the ceiling stays at
+  `GIVETH_MAX_DEACTIVATIONS_PER_RUN` (default 250), and in neither regime may a
+  run blank most of the listings. Between them no outage can mass-hide
+  projects. `IMPORT_SUMMARY` reports the count as `deactivated`
+  on the `giveth` source; `src/test/givethReconcile.test.ts` covers the cases,
+  the ceiling and the tolerance arithmetic.
+  Nothing in CI exercises the live query, so after pointing `GIVETH_API_URL` at a new
+  instance, check one run's `IMPORT_SUMMARY` line for `giveth` `ok: true`.
+- `sqd typegen` reintroduces a type error in `src/abi/abi.support.ts`: the
+  generated `decodeResult` needs an `as any as Result` cast on its return to
+  compile under TypeScript 5.9+. Reapply it after regenerating the ABI bindings.
+- `sqd codegen` rewrites `src/model/generated/` against the newer
+  `@subsquid/typeorm-codegen`, which names indexes explicitly. The live database
+  uses TypeORM's auto-generated index names, so regenerating will make the next
+  `sqd migration:generate` emit index renames. Treat that as a deliberate,
+  separate migration rather than a side effect of codegen.
 
 ### Logs and Debugging
 - Enable debug mode by setting `SQD_DEBUG=*` in the environment.
