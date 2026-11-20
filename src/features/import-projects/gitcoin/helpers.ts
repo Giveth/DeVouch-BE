@@ -32,6 +32,8 @@ export const processProjectsBatch = async (
       image: project.metadata?.bannerImg
         ? convertIpfsHashToHttps(project.metadata?.bannerImg)
         : "",
+      // Showdown passes any HTML in the source text through untouched. The
+      // result is sanitized by `updateOrCreateProject` before it is stored.
       descriptionHtml: description
         ? converter.makeHtml(description)
         : undefined,
