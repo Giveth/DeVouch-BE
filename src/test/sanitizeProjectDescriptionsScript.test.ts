@@ -16,6 +16,7 @@ import { closeConnection, deleteAll, getTestEntityManager } from "./utils";
 import { Project } from "../model";
 import {
   BackupEntry,
+  createBackupFile,
   descriptionFormatOf,
   isSuspicious,
   main,
@@ -1126,5 +1127,272 @@ describe("restore only reverts what the clean-up committed", () => {
     );
     expect(await restore()).toMatchObject({ restored: 2, notApplied: 0 });
     expect(await snapshot()).toEqual(before);
+  });
+});
+
+// Issues raised in review of the clean-up script.
+describe("isSuspicious: attribute names are not read out of quoted values", () => {
+  test.each([
+    '<a title="Example: onclick= is an attribute" href="https://e.com">x</a>',
+    '<img alt="see javascript: and <script tags" src="https://e.com/a.png">',
+    "<a title='href=javascript:alert(1) is how it is written' href=\"https://e.com\">x</a>",
+    // Ends inside a quoted value that only talks about handlers.
+    '<p>x</p><a title="about onclick= and javascript: ',
+  ])("%j is not flagged", (html) => {
+    expect(isSuspicious(html, sanitizer.sanitizeDescriptionHtml(html))).toBe(
+      false
+    );
+  });
+
+  test.each([
+    '<p>x</p><img alt="a b" onerror=alert(1)',
+    '<p>x</p><img alt="a b" onerror="alert(1)',
+    "<p>x</p><a title='t' href='javascript:alert(1)",
+    "<p>x</p><a href=&#106;avascript:alert(1)",
+    "<p>x</p><svg/onload=alert(1)",
+  ])("%j, never closed, is still flagged", (html) => {
+    expect(isSuspicious(html, sanitizer.sanitizeDescriptionHtml(html))).toBe(
+      true
+    );
+  });
+});
+
+describe("arguments that must not start a clean-up by accident", () => {
+  test.each([
+    ["an empty restore path", ["--restore="], "--restore needs a value"],
+    [
+      "an empty restore path with --apply",
+      ["--restore=", "--apply"],
+      "--restore needs a value",
+    ],
+    ["a restore path with no value", ["--restore"], "--restore needs a value"],
+    ["an empty backup path", ["--backup-file="], "--backup-file needs a value"],
+    [
+      "--restore-unresolved without --restore",
+      ["--restore-unresolved", "--apply"],
+      "--restore-unresolved needs --restore",
+    ],
+    [
+      "--restore-unresolved with a value",
+      ["--restore=x.jsonl", "--restore-unresolved=yes"],
+      "--restore-unresolved takes no value",
+    ],
+  ])("%s is refused", (_name, argv, message) => {
+    expect(() => parseArgs(argv)).toThrow(message);
+  });
+
+  test("a restore path selects restore, with or without the option", () => {
+    expect(parseArgs(["--restore=b.jsonl", "--apply"])).toMatchObject({
+      restore: "b.jsonl",
+      apply: true,
+      restoreUnresolved: false,
+    });
+    expect(
+      parseArgs(["--restore=b.jsonl", "--restore-unresolved"])
+    ).toMatchObject({ restore: "b.jsonl", restoreUnresolved: true });
+  });
+
+  test("an empty restore path fails the command before it connects", async () => {
+    const before = await snapshot();
+    const connect = jest.spyOn(db, "getDataSource");
+    await expect(main(["--restore=", "--apply"])).rejects.toThrow(
+      "--restore needs a value"
+    );
+    expect(connect).not.toHaveBeenCalled();
+    connect.mockRestore();
+    expect(await snapshot()).toEqual(before);
+  });
+});
+
+describe("creating the backup file", () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  test("the file and its directory entry are both flushed", () => {
+    const flushed: string[] = [];
+    const realOpen = fs.openSync;
+    const paths = new Map<number, string>();
+    jest.spyOn(fs, "openSync").mockImplementation(((...args: any[]) => {
+      const fd = (realOpen as any)(...args);
+      paths.set(fd, String(args[0]));
+      return fd;
+    }) as any);
+    const realFsync = fs.fsyncSync;
+    jest.spyOn(fs, "fsyncSync").mockImplementation((fd: number) => {
+      flushed.push(paths.get(fd)!);
+      return realFsync(fd);
+    });
+    createBackupFile(backupFile);
+    expect(flushed).toEqual([backupFile, dir]);
+    expect(fs.readFileSync(backupFile, "utf8")).toBe("");
+  });
+
+  test("a file left over from another run is never reused", () => {
+    fs.writeFileSync(backupFile, "earlier run\n");
+    expect(() => createBackupFile(backupFile)).toThrow("EEXIST");
+    expect(fs.readFileSync(backupFile, "utf8")).toBe("earlier run\n");
+  });
+
+  test("a directory that cannot be flushed stops the run", () => {
+    const realFsync = fs.fsyncSync;
+    let calls = 0;
+    jest.spyOn(fs, "fsyncSync").mockImplementation((fd: number) => {
+      if (++calls === 2) throw new Error("EIO: i/o error, fsync");
+      return realFsync(fd);
+    });
+    expect(() => createBackupFile(backupFile)).toThrow("EIO");
+  });
+});
+
+describe("reading and resolving a backup", () => {
+  const restore = (
+    options: { restoreUnresolved?: boolean; apply?: boolean } = {},
+    log: (line: string) => void = quiet
+  ) =>
+    runRestore(em.connection, {
+      file: backupFile,
+      apply: options.apply ?? true,
+      restoreUnresolved: options.restoreUnresolved,
+      log,
+    });
+  const records = () =>
+    fs
+      .readFileSync(backupFile, "utf8")
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => JSON.parse(line));
+  const write = (lines: object[]) =>
+    fs.writeFileSync(
+      backupFile,
+      lines.map((line) => JSON.stringify(line)).join("\n") + "\n"
+    );
+  // The file as it is when the run dies right after the commit.
+  const withoutCommitted = () => records().filter((r) => !("committed" in r));
+
+  test("a damaged last record that is complete is refused before any write", async () => {
+    await runCleanup(em.connection, { apply: true, backupFile, log: quiet });
+    const cleaned = await snapshot();
+    // Ends with a line feed: this was written whole, not cut short.
+    fs.appendFileSync(backupFile, '{"id":"giveth-9","before":{"descr\n');
+    await expect(restore()).rejects.toThrow(/line 5 is not a backup entry/);
+    expect(await snapshot()).toEqual(cleaned);
+  });
+
+  test("the same record without its line feed is an interrupted write", async () => {
+    const before = await snapshot();
+    await runCleanup(em.connection, { apply: true, backupFile, log: quiet });
+    fs.appendFileSync(backupFile, '{"id":"giveth-9","before":{"descr');
+    const lines: string[] = [];
+    expect(await restore({}, (line) => lines.push(line))).toMatchObject({
+      restored: 2,
+    });
+    expect(lines.some((line) => line.startsWith("WARNING"))).toBe(true);
+    expect(await snapshot()).toEqual(before);
+  });
+
+  test("the transaction's cluster is recorded with its id", async () => {
+    await runCleanup(em.connection, { apply: true, backupFile, log: quiet });
+    const prepared = records().find((r) => "prepared" in r).prepared;
+    expect(prepared.system).toMatch(/^\d+$/);
+  });
+
+  test("a transaction id from another cluster is not looked up here", async () => {
+    await runCleanup(em.connection, { apply: true, backupFile, log: quiet });
+    const cleaned = await snapshot();
+    // The id is one this database knows as committed - but the file says it
+    // was issued elsewhere, where it would be someone else's transaction.
+    write(
+      withoutCommitted().map((r) =>
+        "prepared" in r ? { ...r, prepared: { ...r.prepared, system: "1" } } : r
+      )
+    );
+    expect(await restore()).toMatchObject({ restored: 0, unresolved: 2 });
+    expect(await snapshot()).toEqual(cleaned);
+  });
+
+  test("a row on the skip list is not reported as unresolved", async () => {
+    await runCleanup(em.connection, { apply: true, backupFile, log: quiet });
+    write(
+      withoutCommitted().map((r) =>
+        "prepared" in r
+          ? {
+              ...r,
+              prepared: {
+                txid: "99999999999",
+                skipped: ["gitcoin-1"],
+              },
+            }
+          : r
+      )
+    );
+    const lines: string[] = [];
+    expect(await restore({}, (line) => lines.push(line))).toMatchObject({
+      restored: 0,
+      notApplied: 1,
+      unresolved: 1,
+    });
+    expect(
+      lines
+        .find((line) => line.includes("gitcoin-1"))!
+        .startsWith("NOT APPLIED")
+    ).toBe(true);
+  });
+
+  test("an unresolved batch can be restored from the rows themselves, on request", async () => {
+    const before = await snapshot();
+    await runCleanup(em.connection, { apply: true, backupFile, log: quiet });
+    // gitcoin-1 changed after the clean-up; giveth-1 still holds its output.
+    await em
+      .getRepository(Project)
+      .update({ id: "gitcoin-1" }, { descriptionHtml: "<p>newer</p>" });
+    write(
+      withoutCommitted().map((r) =>
+        "prepared" in r
+          ? { ...r, prepared: { txid: "99999999999", skipped: [] } }
+          : r
+      )
+    );
+
+    expect(await restore()).toMatchObject({ restored: 0, unresolved: 2 });
+    expect(
+      await restore({ restoreUnresolved: true, apply: false })
+    ).toMatchObject({ restored: 0, unresolved: 0 });
+
+    expect(await restore({ restoreUnresolved: true })).toMatchObject({
+      restored: 1,
+      skipped: 1,
+      unresolved: 0,
+    });
+    const rows = await snapshot();
+    expect(rows.find((p) => p.id === "giveth-1")).toEqual(
+      before.find((p) => p.id === "giveth-1")
+    );
+    expect(rows.find((p) => p.id === "gitcoin-1")!.descriptionHtml).toBe(
+      "<p>newer</p>"
+    );
+  });
+
+  test("rows on the skip list stay untouched even when unresolved rows are restored", async () => {
+    await runCleanup(em.connection, { apply: true, backupFile, log: quiet });
+    const cleaned = await snapshot();
+    write(
+      withoutCommitted().map((r) =>
+        "prepared" in r
+          ? {
+              ...r,
+              prepared: {
+                txid: "99999999999",
+                skipped: ["gitcoin-1", "giveth-1"],
+              },
+            }
+          : r
+      )
+    );
+    expect(await restore({ restoreUnresolved: true })).toMatchObject({
+      restored: 0,
+      notApplied: 2,
+    });
+    expect(await snapshot()).toEqual(cleaned);
   });
 });

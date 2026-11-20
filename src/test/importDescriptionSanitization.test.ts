@@ -603,3 +603,75 @@ describe("repeated imports of an unchanged project", () => {
     ).toBe("unchanged");
   });
 });
+
+// An update leaves a column alone when its new value is `undefined`, so a
+// field the source stops sending has to be written as NULL - otherwise the
+// old value stays and every later import finds the same difference again.
+describe("a value the source clears is cleared in the row", () => {
+  const OLD = new Date("2026-06-03T00:00:00.000Z");
+  const gitcoin = (description: string) =>
+    ({
+      id: "0xCleared",
+      name: "Cleared",
+      metadata: { type: "project", description, createdAt: 1700000000000 },
+    }) as any;
+
+  beforeEach(() => {
+    jest.spyOn(console, "log").mockImplementation(() => {});
+  });
+
+  test("gitcoin: clearing the description clears the stored HTML, once", async () => {
+    await processGitcoinBatch([gitcoin("Old **text**")]);
+    expect((await stored("gitcoin-0xcleared")).descriptionHtml).toContain(
+      "<strong>text</strong>"
+    );
+
+    expect(await processGitcoinBatch([gitcoin("")])).toMatchObject({
+      written: 1,
+    });
+    const row = await stored("gitcoin-0xcleared");
+    expect(row.descriptionHtml).toBeNull();
+    expect(row.descriptionSummary).toBe("");
+
+    await em
+      .getRepository(Project)
+      .update({ id: "gitcoin-0xcleared" }, { lastUpdatedTimestamp: OLD });
+    for (let run = 0; run < 2; run++) {
+      expect(await processGitcoinBatch([gitcoin("")])).toMatchObject({
+        written: 0,
+        unchanged: 1,
+      });
+    }
+    expect((await stored("gitcoin-0xcleared")).lastUpdatedTimestamp).toEqual(
+      OLD
+    );
+  });
+
+  test("giveth: fields the source stops sending are cleared, once", async () => {
+    const full = {
+      id: "97",
+      title: "Shrinking",
+      description: "<p>Words</p>",
+      url: "/project/shrinking",
+      image: "https://example.com/i.png",
+      creationDate: "2026-01-01T00:00:00.000Z",
+    };
+    await updateOrCreateProject(full, givethSourceConfig);
+
+    const sparse = { id: "97", title: "Shrinking" };
+    expect(await updateOrCreateProject(sparse, givethSourceConfig)).toBe(
+      "updated"
+    );
+    expect(await stored("giveth-97")).toMatchObject({
+      title: "Shrinking",
+      description: null,
+      descriptionSummary: "",
+      url: null,
+      image: null,
+      sourceCreatedAt: null,
+    });
+    expect(await updateOrCreateProject(sparse, givethSourceConfig)).toBe(
+      "unchanged"
+    );
+  });
+});

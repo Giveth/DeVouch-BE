@@ -776,3 +776,28 @@ describe("markup that does not settle", () => {
     }
   );
 });
+
+describe("links need somewhere to go", () => {
+  test.each([
+    '<a href="https://">x</a>',
+    '<a href="http://">x</a>',
+    '<a href="https:///path">x</a>',
+    '<a href="https://?q=1">x</a>',
+    '<a href="https://#top">x</a>',
+    '<a href="  https:// ">x</a>',
+  ])("%j is left as plain text", (html) => {
+    expect(clean(html)).toBe("<a>x</a>");
+  });
+
+  test("a link with a host is kept", () => {
+    expect(clean('<a href="https://e.com">x</a>')).toBe(
+      '<a href="https://e.com" target="_blank" rel="noopener noreferrer nofollow">x</a>'
+    );
+    expect(clean('<a href="HTTP://e.com/p?q#f">x</a>')).toContain(
+      'href="HTTP://e.com/p?q#f"'
+    );
+    expect(clean('<a href="mailto:a@e.com">x</a>')).toContain(
+      'href="mailto:a@e.com"'
+    );
+  });
+});

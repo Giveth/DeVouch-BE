@@ -8,7 +8,7 @@
 //     node -r dotenv/config lib/scripts/sanitizeProjectDescriptions.js --apply
 //   Put the previous values back from a backup file:
 //     node -r dotenv/config lib/scripts/sanitizeProjectDescriptions.js \
-//       --restore=<file> [--apply]
+//       --restore=<file> [--apply] [--restore-unresolved]
 //
 // Options: --source=<source>  --batch-size=<n>  --backup-file=<path>
 // `--source` must be one of the imported sources (giveth, gitcoin, gardens,
@@ -27,7 +27,10 @@
 // least as much as the database did. Restore reads it back as follows:
 //   - entries only          -> the transaction cannot have committed;
 //   - entries + prepared    -> the run died around the commit; the database
-//                              is asked whether that transaction committed;
+//                              is asked whether that transaction committed.
+//                              If it can no longer say (see
+//                              `--restore-unresolved`), the rows are reported
+//                              and left alone;
 //   - entries + ... + committed -> the batch was applied.
 // Only rows of an applied batch that were not listed as skipped are restored.
 
@@ -113,7 +116,12 @@ export interface BackupEntry {
 // The two records that follow a batch's entries; see the top of the file.
 interface PreparedRecord {
   batch: string;
-  prepared: { txid: string; skipped: string[] };
+  prepared: {
+    txid: string;
+    skipped: string[];
+    /** The database cluster `txid` belongs to, when it could be read. */
+    system?: string;
+  };
 }
 interface CommittedRecord {
   batch: string;
@@ -173,15 +181,12 @@ const hasSuspiciousElement = (html: string): boolean => {
 };
 
 // A tag that is never closed (`<img src=x onerror=...` at the end of a value)
-// is not reported by the parser, but it is still an attempt. These look at the
-// raw text of a tag, from its `<name` up to the first `<` or `>`.
-const SUSPICIOUS_TAG_TEXT = new RegExp(
-  `<(?:${SUSPICIOUS_TAGS.join("|")})(?=[\\s/>]|$)`,
-  "i"
-);
-const HANDLER_IN_TAG_TEXT = /<[a-z][^<>]*[\s"'/]on[a-z]+\s*=/i;
-const SCRIPT_URL_IN_TAG_TEXT =
-  /<[a-z][^<>]*\s[a-z:-]+\s*=\s*["']?\s*(?:javascript:|vbscript:|data:text\/html)/i;
+// is not reported by the parser, but it is still an attempt. Closing it - on
+// its own, or after ending a quoted value it stopped in - hands it to the same
+// parser, so it is judged by its attribute names and values like any other
+// tag, and text inside a quoted value is never mistaken for an attribute.
+// Where the value does not end inside a tag, the added characters are text.
+const UNCLOSED_TAG_ENDINGS = [">", '">', "'>"];
 
 const count = (text: string, pattern: RegExp) =>
   (text.match(pattern) ?? []).length;
@@ -189,10 +194,10 @@ const count = (text: string, pattern: RegExp) =>
 // Video embeds are ordinary content, so an iframe only counts when the
 // clean-up removes one that pointed somewhere.
 export const isSuspicious = (before: string, after: string): boolean =>
-  SUSPICIOUS_TAG_TEXT.test(before) ||
-  HANDLER_IN_TAG_TEXT.test(before) ||
-  SCRIPT_URL_IN_TAG_TEXT.test(before) ||
   hasSuspiciousElement(before) ||
+  UNCLOSED_TAG_ENDINGS.some((ending) =>
+    hasSuspiciousElement(before + ending)
+  ) ||
   count(before, /<iframe\b[^>]*\ssrc\s*=\s*["']?[^"'\s>]/gi) >
     count(after, /<iframe\b/gi);
 
@@ -316,6 +321,43 @@ const appendBackup = (file: string, records: object[]) => {
   }
 };
 
+// Identifies the database cluster. Transaction ids are only meaningful
+// within the cluster that issued them: another one may well have a committed
+// transaction with the same number. Not being able to read it is not a
+// reason to refuse the clean-up; the id is then recorded without it.
+const systemIdentifier = async (
+  dataSource: DataSource
+): Promise<string | undefined> => {
+  try {
+    const [{ system }] = await dataSource.query(
+      `SELECT system_identifier::text AS "system" FROM pg_control_system()`
+    );
+    return typeof system === "string" ? system : undefined;
+  } catch {
+    return undefined;
+  }
+};
+
+// Creates the backup file, which must not exist yet: a run never appends to
+// a file left over from another one. The new name is flushed to disk as well
+// - flushing the file alone does not guarantee that its directory entry
+// survives a crash, and the rows would then be changed with no backup to be
+// found. Throws, before any row is touched, if either step fails.
+export const createBackupFile = (file: string) => {
+  const fd = fs.openSync(file, "wx", 0o600);
+  try {
+    fs.fsyncSync(fd);
+  } finally {
+    fs.closeSync(fd);
+  }
+  const directory = fs.openSync(path.dirname(file), "r");
+  try {
+    fs.fsyncSync(directory);
+  } finally {
+    fs.closeSync(directory);
+  }
+};
+
 export const runCleanup = async (
   dataSource: DataSource,
   options: CleanupOptions
@@ -337,6 +379,8 @@ export const runCleanup = async (
     failed: 0,
     bySource: {},
   };
+
+  const system = apply ? await systemIdentifier(dataSource) : undefined;
 
   // Keyset pagination on the primary key: stable while rows are being
   // rewritten, and never holds more than one batch in memory.
@@ -422,7 +466,10 @@ export const runCleanup = async (
       // Last thing before the commit, and on disk before it: which rows this
       // transaction left alone, and the id the database knows it by. If this
       // cannot be written the transaction is rolled back.
-      const prepared: PreparedRecord = { batch, prepared: { txid, skipped } };
+      const prepared: PreparedRecord = {
+        batch,
+        prepared: { txid, skipped, ...(system ? { system } : {}) },
+      };
       appendBackup(backupFile!, [prepared]);
     });
     // The transaction committed. Should the run die before this line is
@@ -467,13 +514,16 @@ const isPrepared = (value: any): value is PreparedRecord =>
   typeof value.prepared.txid === "string" &&
   /^\d{1,20}$/.test(value.prepared.txid) &&
   Array.isArray(value.prepared.skipped) &&
-  value.prepared.skipped.every((id: unknown) => typeof id === "string");
+  value.prepared.skipped.every((id: unknown) => typeof id === "string") &&
+  (value.prepared.system === undefined ||
+    typeof value.prepared.system === "string");
 
 const isCommitted = (value: any): value is CommittedRecord =>
   !!value && typeof value.batch === "string" && value.committed === true;
 
 interface BatchOutcome {
   txid: string;
+  system?: string;
   skipped: Set<string>;
   committed: boolean;
 }
@@ -484,11 +534,27 @@ interface Backup {
   batches: Map<string, BatchOutcome>;
 }
 
+// Whether the file's last byte is a line feed. Every record is written with
+// one after it, so a last line without it was cut short.
+const endsWithNewline = (file: string): boolean => {
+  const fd = fs.openSync(file, "r");
+  try {
+    const { size } = fs.fstatSync(fd);
+    if (size === 0) return false;
+    const last = Buffer.alloc(1);
+    fs.readSync(fd, last, 0, 1, size - 1);
+    return last[0] === 0x0a;
+  } finally {
+    fs.closeSync(fd);
+  }
+};
+
 // Reads a backup file, checking every line before any of them is used. Every
 // write is flushed before the next step is taken, so the only line that can
 // legitimately be cut short is the last one, written when the run was
-// interrupted. Anything else that does not parse means the file is not a
-// backup this script wrote.
+// interrupted - and a line that was cut short has no line feed after it.
+// Anything else that does not parse, a complete last line included, means
+// the file is damaged or is not a backup this script wrote.
 const readBackupFile = async (
   file: string,
   log: (line: string) => void
@@ -520,6 +586,7 @@ const readBackupFile = async (
     } else if (isPrepared(record)) {
       batches.set(record.batch, {
         txid: record.prepared.txid,
+        system: record.prepared.system,
         skipped: new Set(record.prepared.skipped),
         committed: false,
       });
@@ -528,6 +595,11 @@ const readBackupFile = async (
     } else {
       invalidLine = lineNumber;
     }
+  }
+  if (invalidLine && endsWithNewline(file)) {
+    throw new Error(
+      `${file}: line ${invalidLine} is not a backup entry; nothing was restored`
+    );
   }
   if (invalidLine) {
     // A cut-short line is treated as never written. That is the safe reading
@@ -549,16 +621,23 @@ type BatchState = "applied" | "not-applied" | "unresolved";
 
 // Whether the transaction of a batch that never recorded its commit did
 // commit. PostgreSQL keeps that answer for exactly this purpose. It cannot
-// give one for a transaction id it does not know (a different database, or a
-// status it no longer keeps): that is reported, never guessed.
+// give one for a transaction id it does not know - a status it no longer
+// keeps, or an id issued by another cluster, where the same number may belong
+// to an unrelated transaction. Those are reported, never guessed.
 const transactionState = async (
   dataSource: DataSource,
-  txid: string
+  outcome: BatchOutcome
 ): Promise<BatchState> => {
   try {
+    if (
+      outcome.system !== undefined &&
+      outcome.system !== (await systemIdentifier(dataSource))
+    ) {
+      return "unresolved";
+    }
     const [{ status }] = await dataSource.query(
       `SELECT txid_status($1::bigint) AS "status"`,
-      [txid]
+      [outcome.txid]
     );
     if (status === "committed") return "applied";
     if (status === "aborted") return "not-applied";
@@ -575,9 +654,20 @@ const transactionState = async (
 // those are the importer's, and are not replaced with an older description.
 // A row the clean-up did change is only restored while it still holds exactly
 // what the clean-up wrote. Safe to re-run.
+//
+// `restoreUnresolved` is for a batch whose outcome the database can no longer
+// confirm. Its rows are normally left alone. With this option they are
+// restored on the evidence of the row alone: it holds exactly what the
+// clean-up meant to write. That cannot tell the clean-up's write from an
+// identical one by the importer, which is why it has to be asked for.
 export const runRestore = async (
   dataSource: DataSource,
-  options: { file: string; apply: boolean; log?: (line: string) => void }
+  options: {
+    file: string;
+    apply: boolean;
+    restoreUnresolved?: boolean;
+    log?: (line: string) => void;
+  }
 ): Promise<RestoreReport> => {
   const log = options.log ?? console.log;
   const { entries, batches } = await readBackupFile(options.file, log);
@@ -600,7 +690,7 @@ export const runRestore = async (
           ? "not-applied"
           : outcome.committed
             ? "applied"
-            : await transactionState(dataSource, outcome.txid)
+            : await transactionState(dataSource, outcome)
       );
     }
     return states.get(batch)!;
@@ -610,22 +700,23 @@ export const runRestore = async (
     // An entry without a batch comes from a file written before outcomes
     // were recorded. All there is to go by is the row itself.
     if (entry.batch !== undefined) {
-      const state = await stateOf(entry.batch);
-      if (state === "unresolved") {
+      // The skip list is checked first: a row the transaction left alone
+      // needs no restoring whether or not that transaction committed.
+      const state = batches.get(entry.batch)?.skipped.has(entry.id)
+        ? "not-applied"
+        : await stateOf(entry.batch);
+      if (state === "not-applied") {
+        report.notApplied++;
+        log(`NOT APPLIED ${entry.id}: the clean-up did not change this row`);
+        continue;
+      }
+      if (state === "unresolved" && !options.restoreUnresolved) {
         report.unresolved++;
         log(
           `UNRESOLVED ${entry.id}: cannot tell whether transaction ${
             batches.get(entry.batch)!.txid
           } committed in this database; left alone`
         );
-        continue;
-      }
-      if (
-        state === "not-applied" ||
-        batches.get(entry.batch)!.skipped.has(entry.id)
-      ) {
-        report.notApplied++;
-        log(`NOT APPLIED ${entry.id}: the clean-up did not change this row`);
         continue;
       }
     }
@@ -669,7 +760,14 @@ export const runRestore = async (
 };
 
 export const parseArgs = (argv: string[]) => {
-  const known = ["apply", "source", "batch-size", "backup-file", "restore"];
+  const known = [
+    "apply",
+    "source",
+    "batch-size",
+    "backup-file",
+    "restore",
+    "restore-unresolved",
+  ];
   const args: Record<string, string | true> = {};
   for (const arg of argv) {
     const match = /^--([a-z-]+)(?:=(.*))?$/.exec(arg);
@@ -681,11 +779,17 @@ export const parseArgs = (argv: string[]) => {
   }
   // `--apply=false` would otherwise read as "not applying" by accident, and
   // `--apply=true` as a dry run.
-  if (args.apply !== undefined && args.apply !== true) {
-    throw new Error("--apply takes no value");
+  for (const flag of ["apply", "restore-unresolved"]) {
+    if (args[flag] !== undefined && args[flag] !== true) {
+      throw new Error(`--${flag} takes no value`);
+    }
   }
+  // An empty value is refused like a missing one. `--restore=$FILE` with
+  // the variable unset must not turn into a clean-up run.
   const value = (name: string): string | undefined => {
-    if (args[name] === true) throw new Error(`--${name} needs a value`);
+    if (args[name] === true || args[name] === "") {
+      throw new Error(`--${name} needs a value`);
+    }
     return args[name] as string | undefined;
   };
   const batchSize = value("batch-size");
@@ -698,6 +802,8 @@ export const parseArgs = (argv: string[]) => {
         throw new Error(`--${name} cannot be combined with --restore`);
       }
     }
+  } else if (args["restore-unresolved"] !== undefined) {
+    throw new Error("--restore-unresolved needs --restore");
   }
   const source = value("source");
   if (source !== undefined) assertSupportedSource(source);
@@ -707,6 +813,7 @@ export const parseArgs = (argv: string[]) => {
     batchSize: batchSize ? Number(batchSize) : undefined,
     backupFile: value("backup-file"),
     restore: value("restore"),
+    restoreUnresolved: args["restore-unresolved"] === true,
   };
 };
 
@@ -724,16 +831,17 @@ export const main = async (argv: string[]) => {
   );
 
   try {
-    if (args.restore) {
+    if (args.restore !== undefined) {
       const report = await runRestore(dataSource, {
         file: args.restore,
         apply: args.apply,
+        restoreUnresolved: args.restoreUnresolved,
       });
       console.log(`RESTORE_SUMMARY ${JSON.stringify(report)}`);
       if (report.unresolved > 0) {
         process.exitCode = 1;
         console.error(
-          `${report.unresolved} row(s) were left alone: it could not be established whether their batch committed in this database.`
+          `${report.unresolved} row(s) were left alone: it could not be established whether their batch committed in this database. To restore those that still hold exactly what the clean-up wrote, add --restore-unresolved.`
         );
       }
       return;
@@ -748,9 +856,8 @@ export const main = async (argv: string[]) => {
         )
       : undefined;
     if (backupFile) {
-      // Fail before touching any row if the backup cannot be written, and
-      // never append to a file left over from another run.
-      fs.closeSync(fs.openSync(backupFile, "wx", 0o600));
+      // Fail before touching any row if the backup cannot be written.
+      createBackupFile(backupFile);
       console.log(`Previous values are saved to ${backupFile}`);
     }
 

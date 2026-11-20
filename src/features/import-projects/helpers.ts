@@ -330,19 +330,23 @@ export const updateOrCreateProject = async (
         rfRoundsSet.add(rfRound);
       }
 
+      // A field the source no longer sends is `undefined`, and an update
+      // leaves an undefined column as it is. The old value would then stay
+      // in the row and be found "changed" again by every later import, so a
+      // missing value is written as NULL.
       const updatedProject = {
         ...existingProject,
-        title,
-        description,
-        image,
-        url,
-        descriptionHtml,
+        title: title ?? null,
+        description: description ?? null,
+        image: image ?? null,
+        url: url ?? null,
+        descriptionHtml: descriptionHtml ?? null,
         descriptionSummary,
         lastUpdatedTimestamp: sourceChanged
           ? new Date()
           : existingProject.lastUpdatedTimestamp,
         rfRounds: Array.from(rfRoundsSet),
-        sourceCreatedAt,
+        sourceCreatedAt: sourceCreatedAt ?? null,
         imported: true,
       };
 

@@ -68,7 +68,10 @@ const getVideoEmbed = (src?: string): { src: string; title: string } | null => {
 // Links and images must be absolute. A relative URL was written for the page
 // the description came from and would resolve against whichever site renders
 // it instead.
-const ABSOLUTE_LINK = /^\s*(?:https?:\/\/|mailto:)/i;
+// `https://` with nothing after it passes a scheme check but leads nowhere,
+// so a host is required. (The frontend's copy of this pattern is looser;
+// stricter here is fine, the reverse would not be.)
+const ABSOLUTE_LINK = /^\s*(?:https?:\/\/[^\s/?#]|mailto:)/i;
 const ABSOLUTE_IMAGE = /^\s*https?:\/\//i;
 
 // Classes written by the Quill editor used on Giveth.
