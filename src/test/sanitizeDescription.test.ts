@@ -1,8 +1,10 @@
-import { describe, expect, test } from "@jest/globals";
+import { describe, expect, jest, test } from "@jest/globals";
 import Showdown from "showdown";
 import {
+  isUnsanitizedFormOf,
   sanitizeDescriptionFields,
   sanitizeDescriptionHtml,
+  sanitizeToFixedPoint,
 } from "../features/import-projects/sanitizeDescription";
 
 const clean = sanitizeDescriptionHtml;
@@ -30,7 +32,7 @@ describe("executable content is removed", () => {
   });
 
   test("img with an error handler", () => {
-    expect(clean("<img src=x onerror=alert(1)>")).toBe("<img />");
+    expect(clean("<img src=x onerror=alert(1)>")).toBe("");
     expect(
       clean('<img src="https://e.com/a.png" onerror="alert(1)" alt="a">')
     ).toBe('<img src="https://e.com/a.png" alt="a" />');
@@ -68,19 +70,13 @@ describe("executable content is removed", () => {
     "file:///etc/passwd",
   ])("link with a dangerous URL: %j", (href) => {
     const out = clean(`<a href="${href}">x</a>`);
-    expect(out).toBe(
-      '<a target="_blank" rel="noopener noreferrer nofollow">x</a>'
-    );
+    expect(out).toBe("<a>x</a>");
   });
 
   test("images only load over http(s)", () => {
-    expect(clean('<img src="javascript:alert(1)">')).toBe("<img />");
-    expect(clean('<img src="data:image/svg+xml;base64,PHN2Zz4=">')).toBe(
-      "<img />"
-    );
-    expect(clean('<img src="x" srcset="javascript:alert(1) 1x">')).toBe(
-      "<img />"
-    );
+    expect(clean('<img src="javascript:alert(1)">')).toBe("");
+    expect(clean('<img src="data:image/svg+xml;base64,PHN2Zz4=">')).toBe("");
+    expect(clean('<img src="x" srcset="javascript:alert(1) 1x">')).toBe("");
   });
 
   test("svg, math and other executable or embedding markup", () => {
@@ -269,8 +265,8 @@ describe("legitimate formatting is kept", () => {
   test("relative and protocol-relative URLs are dropped", () => {
     expect(clean('<a href="/admin">x</a>')).not.toContain("href");
     expect(clean('<a href="//evil.example">x</a>')).not.toContain("href");
-    expect(clean('<img src="/a.png">')).toBe("<img />");
-    expect(clean('<img src="//e.com/a.png">')).toBe("<img />");
+    expect(clean('<img src="/a.png">')).toBe("");
+    expect(clean('<img src="//e.com/a.png">')).toBe("");
   });
 
   test("safe images are kept", () => {
@@ -411,14 +407,14 @@ describe("sanitizeDescriptionFields", () => {
       expect(
         sanitizeDescriptionFields({ descriptionHtml: payload }, format)
           .descriptionHtml
-      ).toBe("<p>ok</p><img />");
+      ).toBe("<p>ok</p>");
     }
   });
 
   test("an HTML description is sanitized", () => {
     expect(
       sanitizeDescriptionFields({ description: payload }, "html").description
-    ).toBe("<p>ok</p><img />");
+    ).toBe("<p>ok</p>");
   });
 
   test("missing values stay missing", () => {
@@ -447,4 +443,336 @@ describe("sanitizeDescriptionFields", () => {
         .descriptionHtml
     ).toBe("<i>a</i>");
   });
+});
+
+describe("links", () => {
+  test("a link without a usable address is left as plain text, with no target or rel", () => {
+    expect(clean('<a href="/admin" target="_top" rel="opener">x</a>')).toBe(
+      "<a>x</a>"
+    );
+    expect(clean('<a target="_self" rel="opener">x</a>')).toBe("<a>x</a>");
+  });
+
+  test("target and rel written in the source never survive, in any order", () => {
+    const expected =
+      '<a href="https://e.com" target="_blank" rel="noopener noreferrer nofollow">x</a>';
+    expect(
+      clean('<a rel="opener" target="_top" href="https://e.com">x</a>')
+    ).toBe(expected);
+    expect(
+      clean('<a target="_top" href="https://e.com" rel="opener">x</a>')
+    ).toBe(expected);
+  });
+});
+
+describe("content inside a video iframe", () => {
+  // It used to be escaped once more on every pass, so the value never settled
+  // and grew each time it was sanitized.
+  const embed = (inner: string) =>
+    `<iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ">${inner}</iframe>`;
+
+  test.each([
+    "fallback text",
+    "&lt;b&gt; &amp; x",
+    "<p>fallback</p><script>alert(1)</script>",
+    "</p><img src=x onerror=alert(1)>",
+    "&amp;amp;lt;span&amp;amp;gt;",
+  ])("is dropped, and the result is stable: %j", (inner) => {
+    const once = clean(embed(inner));
+    expect(once).toMatch(/^<iframe [^>]*><\/iframe>$/);
+    expect(once).toBe(clean(embed("")));
+    expect(clean(once)).toBe(once);
+  });
+
+  test("markup after an unclosed iframe does not leak out as text", () => {
+    const once = clean(
+      '<iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ"><p>after</p><img src=x onerror=alert(1)>'
+    );
+    expect(once).not.toMatch(/onerror|&lt;/);
+    expect(clean(once)).toBe(once);
+  });
+});
+
+describe("isUnsanitizedFormOf", () => {
+  const raw = '<p onclick="x">Hi <a href="https://e.com">there</a></p>';
+
+  test("recognises a stored value that only lacks sanitizing", () => {
+    expect(isUnsanitizedFormOf(raw, clean(raw))).toBe(true);
+  });
+
+  test("is false when the content differs, is equal, or is missing", () => {
+    expect(isUnsanitizedFormOf(raw, clean("<p>Other</p>"))).toBe(false);
+    expect(isUnsanitizedFormOf(clean(raw), clean(raw))).toBe(false);
+    expect(isUnsanitizedFormOf(null, clean(raw))).toBe(false);
+    expect(isUnsanitizedFormOf(raw, null)).toBe(false);
+  });
+});
+
+describe("large and adversarial inputs", () => {
+  const timed = (input: string) => {
+    const start = Date.now();
+    const out = clean(input);
+    return { out, ms: Date.now() - start };
+  };
+
+  // The largest description in production is about 1.7 MB: a short text with
+  // one image pasted inline as a data URI. No size limit may reject it.
+  test("a megabyte-sized description with an inline image is handled quickly", () => {
+    const html =
+      "<p>Before</p>" +
+      `<p><img src="data:image/png;base64,${"A".repeat(1_700_000)}"></p>` +
+      '<p>After <a href="https://example.com">link</a></p>';
+    const { out, ms } = timed(html);
+    expect(out).toBe(
+      '<p>Before</p><p></p><p>After <a href="https://example.com" target="_blank" rel="noopener noreferrer nofollow">link</a></p>'
+    );
+    expect(ms).toBeLessThan(5000);
+  });
+
+  test("a megabyte of ordinary markup stays linear", () => {
+    const { out, ms } = timed(
+      '<p>Text <strong>bold</strong> <a href="https://example.com">l</a></p>'.repeat(
+        15_000
+      )
+    );
+    expect(out.length).toBeGreaterThan(1_000_000);
+    expect(ms).toBeLessThan(5000);
+  });
+
+  test("thousands of payloads in one description are all removed", () => {
+    const { out } = timed(
+      '<img src=x onerror=alert(1)><script>alert(1)</script><a href="javascript:alert(1)">x</a><svg onload=alert(1)>'.repeat(
+        5_000
+      )
+    );
+    expect(out).toBe("<a>x</a>".repeat(5_000));
+  });
+
+  test.each([
+    ["unclosed nested blocks", "<div>".repeat(20_000) + "x"],
+    ["nested links", '<a href="https://e.com">'.repeat(20_000) + "x"],
+    ["nested table cells", "<table><tr><td>".repeat(5_000) + "x"],
+    ["nested iframes", "<iframe>".repeat(20_000) + "x"],
+    ["nested discarded tags", "<svg><math><style>".repeat(10_000) + "x"],
+    ["unterminated tags", "<".repeat(100_000)],
+    ["unterminated comments", "<!--".repeat(50_000)],
+    [
+      "one enormous style attribute",
+      `<p style="${"color:red;".repeat(50_000)}">x</p>`,
+    ],
+  ])("%s neither throw nor leave an unstable result", (_name, input) => {
+    const { out, ms } = timed(input);
+    expectInert(out);
+    expect(clean(out)).toBe(out);
+    expect(ms).toBeLessThan(15_000);
+  });
+});
+
+// Checks the structure of the output rather than looking for known payloads:
+// every tag in it must be on the allowlist with allowlisted attributes, and
+// once those tags are taken away no `<` or `>` may be left, i.e. all text is
+// escaped. Inputs are generated from a fixed seed, so a failure reproduces.
+describe("generated markup", () => {
+  const TAGS = new Set(
+    "h1 h2 h3 h4 h5 h6 p div span br hr strong b em i u s del sub sup blockquote code pre ul ol li a img table caption thead tbody tfoot tr th td iframe".split(
+      " "
+    )
+  );
+  const ATTRIBUTES: Record<string, string[]> = {
+    a: ["href", "title", "target", "rel"],
+    img: ["src", "alt", "title", "width", "height"],
+    ol: ["start"],
+    th: ["colspan", "rowspan"],
+    td: ["colspan", "rowspan"],
+    iframe: ["src", "title", "allowfullscreen", "loading", "sandbox"],
+  };
+  const TAG = /<\/?([a-z0-9]+)((?:\s[a-z-]+="[^"<>]*")*)\s?\/?>/g;
+
+  const assertWellFormed = (html: string) => {
+    for (const [, name, attributes] of html.matchAll(TAG)) {
+      expect(TAGS.has(name)).toBe(true);
+      for (const [, attribute, value] of attributes.matchAll(
+        /\s([a-z-]+)="([^"]*)"/g
+      )) {
+        expect([...(ATTRIBUTES[name] ?? []), "style", "class"]).toContain(
+          attribute
+        );
+        if (attribute === "href")
+          expect(value).toMatch(/^(https?:\/\/|mailto:)/);
+        if (attribute === "src" && name === "img")
+          expect(value).toMatch(/^https?:\/\//);
+        if (attribute === "src" && name === "iframe")
+          expect(value).toMatch(
+            /^https:\/\/(www\.youtube(-nocookie)?\.com\/embed\/[\w-]{11}|player\.vimeo\.com\/video\/\d+(\?h=[0-9a-f]+)?)$/
+          );
+        if (attribute === "style")
+          expect(value).toMatch(
+            /^((color|background-color|text-align):[^;:]+;?)+$/
+          );
+        if (attribute === "class")
+          expect(value).toMatch(/^(ql-[a-z0-9-]+ ?)+$/);
+      }
+    }
+    expect(html.replace(TAG, "")).not.toMatch(/[<>]/);
+  };
+
+  let seed = 20261120;
+  const random = () =>
+    (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+  const pick = <T>(items: T[]): T => items[Math.floor(random() * items.length)];
+  const tags = [
+    ...TAGS,
+    ..."script style svg math textarea select option form button noscript title xmp plaintext template object embed details body html head frameset font".split(
+      " "
+    ),
+  ];
+  const attributes = [
+    'href="javascript:alert(1)"',
+    'href="https://e.com"',
+    'src="https://www.youtube.com/embed/dQw4w9WgXcQ"',
+    'src="https://e.com/a.png"',
+    "src=x",
+    "onerror=alert(1)",
+    'style="color:red;position:fixed"',
+    'style="color:red;}</style><script>alert(1)</script>"',
+    'class="ql-size-huge x"',
+    "id=x",
+    'title="</p><script>"',
+    "alt='\"><img src=x onerror=alert(1)>'",
+    'srcdoc="<script>1</script>"',
+    'href="&#x6a;avascript:alert(1)"',
+  ];
+  const texts = [
+    "x",
+    "a < b",
+    "&lt;script&gt;",
+    "&amp;lt;",
+    "-->",
+    "<!--",
+    "]]>",
+    "<![CDATA[",
+    "&",
+    "<",
+    "</",
+    "&#x3c;img src=x onerror=alert(1)&#x3e;",
+    '"',
+    "'",
+    "`",
+  ];
+  const generate = () => {
+    let html = "";
+    for (let i = 1 + Math.floor(random() * 14); i > 0; i--) {
+      const roll = random();
+      if (roll < 0.45) {
+        html +=
+          `<${pick(tags)}` +
+          (random() < 0.5 ? ` ${pick(attributes)}` : "") +
+          (random() < 0.3 ? ` ${pick(attributes)}` : "") +
+          (random() < 0.93 ? ">" : "");
+      } else if (roll < 0.7) html += `</${pick(tags)}>`;
+      else html += pick(texts);
+    }
+    return html;
+  };
+
+  test("is always well formed, on the allowlist, and stable", () => {
+    for (let i = 0; i < 5000; i++) {
+      const input = generate();
+      const once = clean(input);
+      try {
+        assertWellFormed(once);
+        expect(clean(once)).toBe(once);
+      } catch (error) {
+        throw new Error(
+          `input ${JSON.stringify(input)} -> ${JSON.stringify(once)}: ${error}`
+        );
+      }
+    }
+  });
+});
+
+// Every description seen so far settles on the first pass. These cover the
+// limit itself, with a stand-in for a pass that never settles.
+describe("markup that does not settle", () => {
+  const expectFixedPoint = (value: string) => expect(clean(value)).toBe(value);
+
+  test("the default is the real sanitizer and returns what it settles on", () => {
+    const html = '<p>Hi <b>there</b></p><img src=x onerror="alert(1)">';
+    expect(sanitizeToFixedPoint(html)).toBe(clean(html));
+    expect(clean(html)).toBe("<p>Hi <b>there</b></p>");
+  });
+
+  test("stops as soon as a pass changes nothing", () => {
+    const pass = jest.fn((html: string) => clean(html));
+    sanitizeToFixedPoint("<p>x</p>", pass, 5);
+    expect(pass).toHaveBeenCalledTimes(2);
+  });
+
+  test("markup that keeps changing is reduced to its text, within the limit", () => {
+    // Reformats any markup it is given, for ever; leaves plain text alone.
+    const pass = jest.fn((html: string) =>
+      html.includes("<") ? `${html}<br />` : html
+    );
+    const result = sanitizeToFixedPoint(
+      "<p>Tom &amp; Jerry <b>forever</b></p>",
+      pass,
+      5
+    );
+    expect(result).toBe("Tom &amp; Jerry forever");
+    // Five passes, then one to confirm the text is stable. Never a loop.
+    expect(pass).toHaveBeenCalledTimes(6);
+    expectFixedPoint(result);
+  });
+
+  test("if even the text keeps changing, nothing is stored", () => {
+    const pass = jest.fn((html: string) => `${html}!`);
+    expect(sanitizeToFixedPoint("<p>x</p>", pass, 5)).toBe("");
+    expect(pass).toHaveBeenCalledTimes(6);
+  });
+
+  test("the fallback cannot carry markup, whatever the passes produced", () => {
+    // A pass that is broken outright: it hands back a different payload
+    // every time. The result is still inert text or nothing.
+    let n = 0;
+    const hostile = () =>
+      `<script>alert(${n++})</script><img src=x onerror=alert(${n})><a href="javascript:x">y${n}</a>`;
+    const result = sanitizeToFixedPoint("<p>x</p>", hostile, 5);
+    expect(result).not.toMatch(/[<>]/);
+    expectFixedPoint(result);
+
+    // Text that spells out markup stays escaped text.
+    const escaped = sanitizeToFixedPoint(
+      "x",
+      (html) =>
+        html === "x"
+          ? "<b>&lt;script&gt;alert(1)&lt;/script&gt;</b>"
+          : html.includes("<")
+            ? `${html}<i></i>`
+            : html,
+      2
+    );
+    expect(escaped).toBe("&lt;script&gt;alert(1)&lt;/script&gt;");
+    expectFixedPoint(escaped);
+  });
+
+  test("a limit of one pass still returns only a verified fixed point", () => {
+    expect(sanitizeToFixedPoint("<p>a <b>b</b></p>", clean, 1)).toBe("a b");
+  });
+
+  test.each([
+    "<p>".repeat(200) + "x",
+    "<p><div>".repeat(100) + "x" + "</p>".repeat(50),
+    "<table><p>".repeat(60) + "x",
+    "<a><p><li><td>".repeat(80) + "x",
+    "<p><b><div><i><p>".repeat(60) + "x</b>",
+    "</p></div></td>".repeat(100) + "<p>x",
+  ])(
+    "deeply mis-nested markup settles and keeps its formatting: %#",
+    (html) => {
+      const once = clean(html);
+      expectFixedPoint(once);
+      expect(once).toContain("x");
+      expect(once).toMatch(/<(?:p|div|table|a|li|b)>/);
+    }
+  );
 });

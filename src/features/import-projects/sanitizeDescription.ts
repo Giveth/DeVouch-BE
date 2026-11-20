@@ -4,9 +4,12 @@ import sanitizeHtml from "sanitize-html";
 // they carry is reduced to the formatting below before it is stored; every
 // other tag, attribute, URL scheme and style declaration is dropped.
 //
-// The policy is kept identical to the one the frontend applies when rendering
-// (DeVouch-FE `src/helpers/description.ts`), so that sanitizing a stored value
-// again there is a no-op. Change the two together.
+// The allowlist is the one the frontend applies when rendering (DeVouch-FE
+// `src/helpers/description.ts`); change the two together. Nothing stored here
+// may be wider than what the frontend allows. Two differences are deliberate:
+// - text inside a video iframe is dropped here (see `textFilter` below);
+// - the frontend also turns non-breaking spaces into ordinary ones. That is a
+//   rendering preference, so the stored text keeps them.
 
 const TEXT_ALIGN = /^(?:left|right|center|justify)$/i;
 const COLOR_VALUES = [
@@ -159,14 +162,20 @@ const OPTIONS: sanitizeHtml.IOptions = {
   allowProtocolRelative: false,
   transformTags: {
     a: (tagName, attribs) => {
-      if (!ABSOLUTE_LINK.test(attribs.href ?? "")) delete attribs.href;
+      // `target` and `rel` never come from the source: they are set here on
+      // a link that is kept, and dropped with the `href` otherwise, which
+      // leaves a plain text anchor.
+      const { href, target: _target, rel: _rel, ...rest } = attribs;
       return {
         tagName,
-        attribs: {
-          ...attribs,
-          target: "_blank",
-          rel: "noopener noreferrer nofollow",
-        },
+        attribs: ABSOLUTE_LINK.test(href ?? "")
+          ? {
+              ...rest,
+              href,
+              target: "_blank",
+              rel: "noopener noreferrer nofollow",
+            }
+          : rest,
       };
     },
     img: (tagName, attribs) => {
@@ -192,29 +201,75 @@ const OPTIONS: sanitizeHtml.IOptions = {
       return { tagName, attribs: rebuilt };
     },
   },
-  // An iframe that did not resolve to a known video player is removed entirely.
-  exclusiveFilter: (frame) => frame.tag === "iframe" && !frame.attribs.src,
+  // An iframe that did not resolve to a known video player, and an image
+  // left without a source, are removed entirely.
+  exclusiveFilter: (frame) =>
+    (frame.tag === "iframe" || frame.tag === "img") && !frame.attribs.src,
+  // A browser never renders what is written between `<iframe>` and
+  // `</iframe>`, and the parser hands it over as raw text that would be
+  // escaped once more every time the result is sanitized again. A video embed
+  // needs no content, so it is dropped.
+  textFilter: (text, tagName) => (tagName === "iframe" ? "" : text),
 };
+
+const sanitizePass = (html: string): string => sanitizeHtml(html, OPTIONS);
+
+// Text with every tag removed. It parses back to the same text, so it is a
+// value that further passes leave alone.
+const textOnly = (html: string): string =>
+  sanitizeHtml(html, { allowedTags: [], allowedAttributes: {} });
 
 // One pass removes everything that is not allowed, but its output is not
-// always what a second pass would produce: markup nested in a way HTML does
-// not permit (a `<p>` inside a `<p>`) is closed differently once it is parsed
-// again. Both forms are equally safe; they are just not the same string.
+// guaranteed to be what a second pass would produce: markup nested in a way
+// HTML does not permit can be closed differently once it is parsed again.
+// Both forms are equally safe; they are just not the same string.
+//
+// Passes are therefore repeated until the output stops changing. Every
+// description seen so far settles on the first pass; the cap only bounds the
+// work for input built to defeat that.
 const MAX_PASSES = 5;
 
-// Sanitizes a string of HTML. The result is stable - sanitizing it again
-// returns it unchanged - because passes are repeated until the output stops
-// changing. The importer relies on that to tell whether a stored row is up to
-// date, and the clean-up script to be safe to re-run.
-export const sanitizeDescriptionHtml = (html: string): string => {
-  let current = sanitizeHtml(html, OPTIONS);
-  for (let pass = 1; pass < MAX_PASSES; pass++) {
-    const next = sanitizeHtml(current, OPTIONS);
-    if (next === current) break;
+// Repeats `pass` until its output stops changing and returns that output.
+//
+// Markup that has not settled after `maxPasses` is not returned: it would be
+// reformatted again by the next import or clean-up run, which would then see
+// a "change" in a row nobody edited, every time. It is reduced to its text
+// instead, which is stable - and to nothing if even that is not. Whatever is
+// returned has been through `pass` and is left unchanged by it.
+//
+// `pass` and `maxPasses` are parameters so the limit can be tested; callers
+// use the defaults.
+export const sanitizeToFixedPoint = (
+  html: string,
+  pass: (html: string) => string = sanitizePass,
+  maxPasses: number = MAX_PASSES
+): string => {
+  let current = pass(html);
+  for (let done = 1; done < maxPasses; done++) {
+    const next = pass(current);
+    if (next === current) return current;
     current = next;
   }
-  return current;
+  const text = textOnly(current);
+  return pass(text) === text ? text : "";
 };
+
+// Sanitizes a string of HTML. The result is stable - sanitizing it again
+// returns it unchanged. The importer relies on that to tell whether a stored
+// row is up to date, and the clean-up script to be safe to re-run.
+export const sanitizeDescriptionHtml = (html: string): string =>
+  sanitizeToFixedPoint(html);
+
+// True when `stored` holds the same content as `sanitized` and only differs
+// by not having been sanitized yet - as opposed to the source having changed.
+export const isUnsanitizedFormOf = (
+  stored: unknown,
+  sanitized: unknown
+): boolean =>
+  typeof stored === "string" &&
+  typeof sanitized === "string" &&
+  stored !== sanitized &&
+  sanitizeDescriptionHtml(stored) === sanitized;
 
 // What a source puts in its `description` field:
 // - "html": markup that consumers render as HTML (Giveth's editor output).

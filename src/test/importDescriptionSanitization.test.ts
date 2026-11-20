@@ -319,4 +319,287 @@ describe("rows stored before sanitization", () => {
       "unchanged"
     );
   });
+
+  // The listings sort by `lastUpdatedTimestamp`. Replacing stored markup with
+  // its sanitized form is not a project update and must not reorder them.
+  describe("lastUpdatedTimestamp", () => {
+    const OLD = new Date("2026-06-03T00:00:00.000Z");
+    const project = {
+      id: "91",
+      title: "Timestamps",
+      description: HOSTILE_HTML,
+      url: "/project/timestamps",
+      image: null,
+      creationDate: "2026-01-01T00:00:00.000Z",
+    };
+    const storeRaw = async (values: Partial<Project>) => {
+      await updateOrCreateProject(project, givethSourceConfig);
+      await em
+        .getRepository(Project)
+        .update({ id: "giveth-91" }, { lastUpdatedTimestamp: OLD, ...values });
+    };
+
+    test("is kept when only the stored markup is sanitized", async () => {
+      await storeRaw({ description: HOSTILE_HTML });
+      expect(await updateOrCreateProject(project, givethSourceConfig)).toBe(
+        "updated"
+      );
+      const row = await stored("giveth-91");
+      expectNoExecutableMarkup(row.description);
+      expect(row.lastUpdatedTimestamp).toEqual(OLD);
+    });
+
+    test("is kept for a sanitized `descriptionHtml` too", async () => {
+      const gitcoin = {
+        id: "0xTs",
+        title: "t",
+        description: "text",
+        descriptionHtml: "<p>text</p>",
+        url: "#/projects/0xTs",
+        image: "",
+        creationDate: null,
+      };
+      await updateOrCreateProject(gitcoin, gitcoinSourceConfig);
+      await em.getRepository(Project).update(
+        { id: "gitcoin-0xts" },
+        {
+          lastUpdatedTimestamp: OLD,
+          descriptionHtml: '<p onclick="alert(1)">text</p>',
+        }
+      );
+      expect(await updateOrCreateProject(gitcoin, gitcoinSourceConfig)).toBe(
+        "updated"
+      );
+      const row = await stored("gitcoin-0xts");
+      expect(row.descriptionHtml).toBe("<p>text</p>");
+      expect(row.lastUpdatedTimestamp).toEqual(OLD);
+    });
+
+    test("moves when the description changed at the source", async () => {
+      await storeRaw({ description: "<p>An older text</p>" });
+      await updateOrCreateProject(project, givethSourceConfig);
+      const row = await stored("giveth-91");
+      expect(row.lastUpdatedTimestamp.getTime()).toBeGreaterThan(OLD.getTime());
+    });
+
+    test("moves when another field changed along with the markup", async () => {
+      await storeRaw({ description: HOSTILE_HTML, title: "Old title" });
+      await updateOrCreateProject(project, givethSourceConfig);
+      const row = await stored("giveth-91");
+      expect(row.title).toBe("Timestamps");
+      expect(row.lastUpdatedTimestamp.getTime()).toBeGreaterThan(OLD.getTime());
+    });
+
+    test("moves for a plain-text description, which is never reformatted", async () => {
+      const rf = { id: "0xTs2", name: "RF", description: "new text" };
+      await updateOrCreateProject(rf, rfSourceConfig);
+      await em
+        .getRepository(Project)
+        .update(
+          { id: "rf-0xts2" },
+          { lastUpdatedTimestamp: OLD, description: "<b>new text</b>" }
+        );
+      await updateOrCreateProject(rf, rfSourceConfig);
+      const row = await stored("rf-0xts2");
+      expect(row.lastUpdatedTimestamp.getTime()).toBeGreaterThan(OLD.getTime());
+    });
+  });
+
+  test("a rewritten description is logged by size, not by content", async () => {
+    const project = {
+      id: "92",
+      title: "Logs",
+      description: HOSTILE_HTML,
+      url: "/project/logs",
+      image: null,
+      creationDate: "2026-01-01T00:00:00.000Z",
+    };
+    await updateOrCreateProject(project, givethSourceConfig);
+    await em
+      .getRepository(Project)
+      .update({ id: "giveth-92" }, { description: HOSTILE_HTML });
+
+    const log = jest.spyOn(console, "log").mockImplementation(() => {});
+    await updateOrCreateProject(project, givethSourceConfig);
+    const lines = log.mock.calls.map((call) => call.join(" ")).join("\n");
+    expect(lines).toMatch(/description changed \(\d+ chars -> \d+ chars\)/);
+    expect(lines).not.toContain("alert(1)");
+    expect(lines).not.toContain("<h2");
+  });
+});
+
+describe("a description that cannot be sanitized", () => {
+  test("fails that project without storing anything, and the batch goes on", async () => {
+    const unprintable = {
+      toString() {
+        throw new Error("no string form");
+      },
+    };
+    const log = jest.spyOn(console, "log").mockImplementation(() => {});
+    const tally = await processGivethBatch([
+      {
+        id: "95",
+        title: "Bad",
+        description: unprintable as any,
+        slug: "bad",
+        image: null,
+        creationDate: "2026-01-01T00:00:00.000Z",
+      },
+      {
+        id: "96",
+        title: "Good",
+        description: "<p>fine</p>",
+        slug: "good",
+        image: null,
+        creationDate: "2026-01-01T00:00:00.000Z",
+      },
+    ]);
+    expect(tally).toMatchObject({ written: 1, failed: 1 });
+    expect(log.mock.calls.join(" ")).toContain("no string form");
+    expect(
+      await em.getRepository(Project).findOneBy({ id: "giveth-95" })
+    ).toBeNull();
+    expect((await stored("giveth-96")).description).toBe("<p>fine</p>");
+  });
+});
+
+// A second import of the same source data must not touch the row. Every case
+// here is a description the listings show without any text, which used to be
+// taken for a row whose summary had never been set.
+describe("repeated imports of an unchanged project", () => {
+  const OLD = new Date("2026-06-03T00:00:00.000Z");
+  const IMAGE_ONLY = '<p><img src="https://example.com/banner.png"></p>';
+  const VIDEO_ONLY =
+    '<iframe class="ql-video" src="https://www.youtube.com/embed/dQw4w9WgXcQ"></iframe>';
+  const EMPTY_PARAGRAPH = "<p><br></p>";
+
+  const givethProject = (description: unknown) => ({
+    id: "95",
+    title: "Idempotent",
+    description,
+    url: "/project/idempotent",
+    image: "https://example.com/i.png",
+    creationDate: "2026-01-01T00:00:00.000Z",
+  });
+  const age = () =>
+    em
+      .getRepository(Project)
+      .update({ id: "giveth-95" }, { lastUpdatedTimestamp: OLD });
+  const updates = () =>
+    (console.log as jest.Mock).mock.calls.filter(([line]) =>
+      String(line).includes("Project Updated")
+    );
+
+  beforeEach(() => {
+    jest.spyOn(console, "log").mockImplementation(() => {});
+  });
+
+  test.each([
+    ["an image and no text", IMAGE_ONLY],
+    ["a video and no text", VIDEO_ONLY],
+    ["an empty paragraph", EMPTY_PARAGRAPH],
+    ["an empty string", ""],
+    ["no description at all", undefined],
+    ["a null description", null],
+  ])("giveth: %s is written once", async (_name, description) => {
+    const project = givethProject(description);
+    expect(await updateOrCreateProject(project, givethSourceConfig)).toBe(
+      "created"
+    );
+    await age();
+
+    for (let run = 0; run < 3; run++) {
+      expect(await updateOrCreateProject(project, givethSourceConfig)).toBe(
+        "unchanged"
+      );
+    }
+    expect(updates()).toHaveLength(0);
+    expect((await stored("giveth-95")).lastUpdatedTimestamp).toEqual(OLD);
+  });
+
+  test("gitcoin and gardens: a description with no text is written once", async () => {
+    const gitcoin = {
+      id: "0xImage",
+      name: "Image only",
+      metadata: {
+        type: "project",
+        description: "![banner](https://example.com/banner.png)",
+        createdAt: 1700000000000,
+      },
+    } as any;
+    expect(await processGitcoinBatch([gitcoin])).toMatchObject({ written: 1 });
+    expect((await stored("gitcoin-0ximage")).descriptionSummary).toBe("");
+    await em
+      .getRepository(Project)
+      .update({ id: "gitcoin-0ximage" }, { lastUpdatedTimestamp: OLD });
+
+    for (let run = 0; run < 2; run++) {
+      expect(await processGitcoinBatch([gitcoin])).toMatchObject({
+        written: 0,
+        unchanged: 1,
+      });
+    }
+    expect((await stored("gitcoin-0ximage")).lastUpdatedTimestamp).toEqual(OLD);
+  });
+
+  test("a project with missing optional fields is written once", async () => {
+    const project = { id: "96", title: "Sparse" };
+    expect(await updateOrCreateProject(project, givethSourceConfig)).toBe(
+      "created"
+    );
+    expect(await updateOrCreateProject(project, givethSourceConfig)).toBe(
+      "unchanged"
+    );
+  });
+
+  test("a row whose stored summary is out of date is refreshed without being re-dated", async () => {
+    const project = givethProject("<p>Some <strong>text</strong></p>");
+    await updateOrCreateProject(project, givethSourceConfig);
+    await em
+      .getRepository(Project)
+      .update(
+        { id: "giveth-95" },
+        { lastUpdatedTimestamp: OLD, descriptionSummary: "stale" }
+      );
+
+    expect(await updateOrCreateProject(project, givethSourceConfig)).toBe(
+      "updated"
+    );
+    const row = await stored("giveth-95");
+    expect(row.descriptionSummary).toBe("Some text");
+    expect(row.lastUpdatedTimestamp).toEqual(OLD);
+    expect(await updateOrCreateProject(project, givethSourceConfig)).toBe(
+      "unchanged"
+    );
+  });
+
+  test("a text-less description that changes at the source is re-dated", async () => {
+    await updateOrCreateProject(givethProject(IMAGE_ONLY), givethSourceConfig);
+    await age();
+
+    expect(
+      await updateOrCreateProject(givethProject(VIDEO_ONLY), givethSourceConfig)
+    ).toBe("updated");
+    const row = await stored("giveth-95");
+    expect(row.description).toContain("youtube.com/embed/dQw4w9WgXcQ");
+    expect(row.lastUpdatedTimestamp!.getTime()).toBeGreaterThan(OLD.getTime());
+  });
+
+  test("a description that loses its text at the source is re-dated and its summary cleared", async () => {
+    await updateOrCreateProject(
+      givethProject("<p>Words</p>"),
+      givethSourceConfig
+    );
+    await age();
+
+    expect(
+      await updateOrCreateProject(givethProject(IMAGE_ONLY), givethSourceConfig)
+    ).toBe("updated");
+    const row = await stored("giveth-95");
+    expect(row.descriptionSummary).toBe("");
+    expect(row.lastUpdatedTimestamp!.getTime()).toBeGreaterThan(OLD.getTime());
+    expect(
+      await updateOrCreateProject(givethProject(IMAGE_ONLY), givethSourceConfig)
+    ).toBe("unchanged");
+  });
 });
