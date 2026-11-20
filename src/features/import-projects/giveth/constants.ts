@@ -98,6 +98,8 @@ export const givethSourceConfig: SourceConfig = {
   idField: "id",
   titleField: "title",
   descriptionField: "description",
+  // Giveth descriptions are the HTML written by its rich-text editor.
+  descriptionFormat: "html",
   urlField: "url",
   imageField: "image",
   sourceCreatedAtField: "creationDate",

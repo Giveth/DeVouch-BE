@@ -9,6 +9,7 @@ import {
   ProjectImportOutcome,
   SourceConfig,
 } from "./types";
+import { sanitizeDescriptionFields } from "./sanitizeDescription";
 
 // The primary key an imported project is stored under. Shared with the
 // reconciliation pass on purpose: it compares stored ids against ids derived
@@ -169,6 +170,7 @@ export const updateOrCreateProject = async (
     idField,
     titleField,
     descriptionField,
+    descriptionFormat,
     descriptionHtmlField,
     urlField,
     imageField,
@@ -226,10 +228,22 @@ export const updateOrCreateProject = async (
   }
 
   const title = project[titleField];
-  const description = project[descriptionField];
   const url = project[urlField];
   const image = project[imageField];
-  const descriptionHtml = descriptionHtmlField && project[descriptionHtmlField];
+  // Descriptions are written by whoever registered the project on the source
+  // platform. Their HTML is sanitized here, at the single point every importer
+  // persists through, so no source can store markup that was not filtered.
+  // The change detection below compares these sanitized values, which keeps an
+  // up-to-date row "unchanged" and rewrites a row stored before sanitization.
+  const { description, descriptionHtml } = sanitizeDescriptionFields(
+    {
+      description: project[descriptionField],
+      descriptionHtml: descriptionHtmlField
+        ? project[descriptionHtmlField]
+        : undefined,
+    },
+    descriptionFormat
+  );
   const rfRound = rfRoundField && project[rfRoundField];
   const sourceCreatedAt = sourceCreatedAtField && project[sourceCreatedAtField];
 
@@ -357,7 +371,7 @@ export const updateOrCreateProject = async (
   }
 };
 
-const getHtmlTextSummary = (
+export const getHtmlTextSummary = (
   html: string = "",
   lengthLimit: number = DESCRIPTION_SUMMARY_LENGTH
 ): string => {
