@@ -16,7 +16,22 @@
 //
 // Safe to re-run: a row is only touched when sanitizing changes it, and the
 // sanitizer returns its own output unchanged, so a second run finds nothing.
+//
+// The backup file is a log, one JSON object per line, written in this order
+// for every batch of rows:
+//   1. one entry per row the batch intends to change (before/after values);
+//   2. `prepared`: the id of the database transaction and the rows it did not
+//      change after all - written inside the transaction, before it commits;
+//   3. `committed`: written once the transaction has committed.
+// Each step is on disk before the next one starts, so the file always says at
+// least as much as the database did. Restore reads it back as follows:
+//   - entries only          -> the transaction cannot have committed;
+//   - entries + prepared    -> the run died around the commit; the database
+//                              is asked whether that transaction committed;
+//   - entries + ... + committed -> the batch was applied.
+// Only rows of an applied batch that were not listed as skipped are restored.
 
+import { randomUUID } from "crypto";
 import fs from "fs";
 import path from "path";
 import readline from "readline";
@@ -90,6 +105,19 @@ export interface BackupEntry {
   source: string;
   before: DescriptionValues;
   after: DescriptionValues;
+  /** The batch the row was planned in. Absent in files written before
+   *  outcomes were recorded. */
+  batch?: string;
+}
+
+// The two records that follow a batch's entries; see the top of the file.
+interface PreparedRecord {
+  batch: string;
+  prepared: { txid: string; skipped: string[] };
+}
+interface CommittedRecord {
+  batch: string;
+  committed: true;
 }
 
 // Markup that has no place in a description. Only used to label rows in the
@@ -254,14 +282,34 @@ const affected = (result: any): number =>
       ? result.length
       : 0;
 
-const appendBackup = (file: string, entries: BackupEntry[]) => {
+// Writes all of `data`. A single `writeSync` may accept only part of what it
+// is given and report how much; carrying on from there is the caller's job.
+const writeAll = (fd: number, data: Buffer) => {
+  let offset = 0;
+  while (offset < data.length) {
+    const written = fs.writeSync(fd, data, offset, data.length - offset);
+    if (!(written > 0)) {
+      throw new Error(
+        `Could not write the backup: ${offset} of ${data.length} bytes were accepted`
+      );
+    }
+    offset += written;
+  }
+};
+
+// Appends records to the backup file and returns only once they are on disk.
+// Anything that goes wrong is thrown: the caller must not go on to change
+// what these records describe.
+const appendBackup = (file: string, records: object[]) => {
   const fd = fs.openSync(file, "a", 0o600);
   try {
-    fs.writeSync(
+    writeAll(
       fd,
-      entries.map((entry) => JSON.stringify(entry)).join("\n") + "\n"
+      Buffer.from(
+        records.map((record) => JSON.stringify(record)).join("\n") + "\n",
+        "utf8"
+      )
     );
-    // The backup must be on disk before the rows it describes are changed.
     fs.fsyncSync(fd);
   } finally {
     fs.closeSync(fd);
@@ -347,10 +395,18 @@ export const runCleanup = async (
 
     if (!apply || plans.length === 0) continue;
 
-    appendBackup(backupFile!, plans);
+    const batch = randomUUID();
+    appendBackup(
+      backupFile!,
+      plans.map((plan): BackupEntry => ({ ...plan, batch }))
+    );
     // One transaction per batch: a failure leaves the batch untouched, and
     // everything before it committed and recorded in the backup file.
     await dataSource.transaction(async (manager) => {
+      const [{ txid }] = await manager.query(
+        `SELECT txid_current()::text AS "txid"`
+      );
+      const skipped: string[] = [];
       for (const plan of plans) {
         const result = await manager.query(
           SWAP_SQL,
@@ -359,10 +415,20 @@ export const runCleanup = async (
         if (affected(result) === 1) report.updated++;
         else {
           report.skippedConcurrent++;
+          skipped.push(plan.id);
           log(`SKIPPED ${plan.id}: changed since it was read`);
         }
       }
+      // Last thing before the commit, and on disk before it: which rows this
+      // transaction left alone, and the id the database knows it by. If this
+      // cannot be written the transaction is rolled back.
+      const prepared: PreparedRecord = { batch, prepared: { txid, skipped } };
+      appendBackup(backupFile!, [prepared]);
     });
+    // The transaction committed. Should the run die before this line is
+    // written, restore asks the database about `txid` instead.
+    const committed: CommittedRecord = { batch, committed: true };
+    appendBackup(backupFile!, [committed]);
   }
 
   return report;
@@ -375,6 +441,10 @@ export interface RestoreReport {
   alreadyRestored: number;
   /** Rows that hold neither recorded value (changed since); left alone. */
   skipped: number;
+  /** Rows the clean-up listed but did not change; left alone. */
+  notApplied: number;
+  /** Rows of a batch whose outcome could not be established; left alone. */
+  unresolved: number;
 }
 
 const isValues = (value: any): value is DescriptionValues =>
@@ -383,16 +453,48 @@ const isValues = (value: any): value is DescriptionValues =>
     (key) => value[key] === null || typeof value[key] === "string"
   );
 
-// Reads a backup file, checking every entry before any of them is used. Each
-// batch is appended and flushed before its rows are changed, so the only line
-// that can legitimately be cut short is the last one, written when the run was
-// interrupted - and its rows were never changed. Anything else that does not
-// parse means the file is not a backup this script wrote.
-export const readBackup = async (
+const isEntry = (value: any): value is BackupEntry =>
+  !!value &&
+  typeof value.id === "string" &&
+  isValues(value.before) &&
+  isValues(value.after) &&
+  (value.batch === undefined || typeof value.batch === "string");
+
+const isPrepared = (value: any): value is PreparedRecord =>
+  !!value &&
+  typeof value.batch === "string" &&
+  !!value.prepared &&
+  typeof value.prepared.txid === "string" &&
+  /^\d{1,20}$/.test(value.prepared.txid) &&
+  Array.isArray(value.prepared.skipped) &&
+  value.prepared.skipped.every((id: unknown) => typeof id === "string");
+
+const isCommitted = (value: any): value is CommittedRecord =>
+  !!value && typeof value.batch === "string" && value.committed === true;
+
+interface BatchOutcome {
+  txid: string;
+  skipped: Set<string>;
+  committed: boolean;
+}
+
+interface Backup {
+  entries: BackupEntry[];
+  /** Batches that got as far as their `prepared` record. */
+  batches: Map<string, BatchOutcome>;
+}
+
+// Reads a backup file, checking every line before any of them is used. Every
+// write is flushed before the next step is taken, so the only line that can
+// legitimately be cut short is the last one, written when the run was
+// interrupted. Anything else that does not parse means the file is not a
+// backup this script wrote.
+const readBackupFile = async (
   file: string,
-  log: (line: string) => void = console.log
-): Promise<BackupEntry[]> => {
+  log: (line: string) => void
+): Promise<Backup> => {
   const entries: BackupEntry[] = [];
+  const batches = new Map<string, BatchOutcome>();
   let lineNumber = 0;
   let invalidLine = 0;
   const lines = readline.createInterface({
@@ -407,47 +509,126 @@ export const readBackup = async (
         `${file}: line ${invalidLine} is not a backup entry; nothing was restored`
       );
     }
-    let entry: any;
+    let record: any;
     try {
-      entry = JSON.parse(line);
+      record = JSON.parse(line);
     } catch {
-      entry = null;
+      record = null;
     }
-    if (
-      entry &&
-      typeof entry.id === "string" &&
-      isValues(entry.before) &&
-      isValues(entry.after)
-    ) {
-      entries.push(entry);
+    if (isEntry(record)) {
+      entries.push(record);
+    } else if (isPrepared(record)) {
+      batches.set(record.batch, {
+        txid: record.prepared.txid,
+        skipped: new Set(record.prepared.skipped),
+        committed: false,
+      });
+    } else if (isCommitted(record) && batches.has(record.batch)) {
+      batches.get(record.batch)!.committed = true;
     } else {
       invalidLine = lineNumber;
     }
   }
   if (invalidLine) {
+    // A cut-short line is treated as never written. That is the safe reading
+    // for each kind: entries without `prepared` were not applied, and a
+    // missing `committed` is settled by asking the database.
     log(
-      `WARNING: ignoring incomplete last line ${invalidLine} of ${file} (interrupted run; its rows were not changed)`
+      `WARNING: ignoring incomplete last line ${invalidLine} of ${file} (interrupted run)`
     );
   }
-  return entries;
+  return { entries, batches };
 };
 
-// Puts back the values recorded in a backup file. A row is only restored if it
-// still holds exactly what the clean-up wrote, so anything imported since is
-// not overwritten with an older description. Safe to re-run.
+export const readBackup = async (
+  file: string,
+  log: (line: string) => void = console.log
+): Promise<BackupEntry[]> => (await readBackupFile(file, log)).entries;
+
+type BatchState = "applied" | "not-applied" | "unresolved";
+
+// Whether the transaction of a batch that never recorded its commit did
+// commit. PostgreSQL keeps that answer for exactly this purpose. It cannot
+// give one for a transaction id it does not know (a different database, or a
+// status it no longer keeps): that is reported, never guessed.
+const transactionState = async (
+  dataSource: DataSource,
+  txid: string
+): Promise<BatchState> => {
+  try {
+    const [{ status }] = await dataSource.query(
+      `SELECT txid_status($1::bigint) AS "status"`,
+      [txid]
+    );
+    if (status === "committed") return "applied";
+    if (status === "aborted") return "not-applied";
+    return "unresolved";
+  } catch {
+    return "unresolved";
+  }
+};
+
+// Puts back the values recorded in a backup file - for the rows the clean-up
+// actually changed, and nothing else. A row the clean-up listed but then left
+// alone (it had changed in the meantime, or its batch never committed) may
+// since have been given the very same sanitized values by the importer;
+// those are the importer's, and are not replaced with an older description.
+// A row the clean-up did change is only restored while it still holds exactly
+// what the clean-up wrote. Safe to re-run.
 export const runRestore = async (
   dataSource: DataSource,
   options: { file: string; apply: boolean; log?: (line: string) => void }
 ): Promise<RestoreReport> => {
   const log = options.log ?? console.log;
-  const entries = await readBackup(options.file, log);
+  const { entries, batches } = await readBackupFile(options.file, log);
   const report: RestoreReport = {
     entries: entries.length,
     restored: 0,
     alreadyRestored: 0,
     skipped: 0,
+    notApplied: 0,
+    unresolved: 0,
   };
+
+  const states = new Map<string, BatchState>();
+  const stateOf = async (batch: string): Promise<BatchState> => {
+    if (!states.has(batch)) {
+      const outcome = batches.get(batch);
+      states.set(
+        batch,
+        !outcome
+          ? "not-applied"
+          : outcome.committed
+            ? "applied"
+            : await transactionState(dataSource, outcome.txid)
+      );
+    }
+    return states.get(batch)!;
+  };
+
   for (const entry of entries) {
+    // An entry without a batch comes from a file written before outcomes
+    // were recorded. All there is to go by is the row itself.
+    if (entry.batch !== undefined) {
+      const state = await stateOf(entry.batch);
+      if (state === "unresolved") {
+        report.unresolved++;
+        log(
+          `UNRESOLVED ${entry.id}: cannot tell whether transaction ${
+            batches.get(entry.batch)!.txid
+          } committed in this database; left alone`
+        );
+        continue;
+      }
+      if (
+        state === "not-applied" ||
+        batches.get(entry.batch)!.skipped.has(entry.id)
+      ) {
+        report.notApplied++;
+        log(`NOT APPLIED ${entry.id}: the clean-up did not change this row`);
+        continue;
+      }
+    }
     if (!options.apply) {
       log(`WOULD RESTORE ${entry.id}`);
       continue;
@@ -549,6 +730,12 @@ export const main = async (argv: string[]) => {
         apply: args.apply,
       });
       console.log(`RESTORE_SUMMARY ${JSON.stringify(report)}`);
+      if (report.unresolved > 0) {
+        process.exitCode = 1;
+        console.error(
+          `${report.unresolved} row(s) were left alone: it could not be established whether their batch committed in this database.`
+        );
+      }
       return;
     }
 

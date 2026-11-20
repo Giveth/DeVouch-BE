@@ -69,7 +69,9 @@ const backupEntries = (): BackupEntry[] =>
     .readFileSync(backupFile, "utf8")
     .split("\n")
     .filter(Boolean)
-    .map((line) => JSON.parse(line));
+    .map((line) => JSON.parse(line))
+    // Rows only: the file also records what became of each batch.
+    .filter((record) => "before" in record);
 
 beforeAll(async () => {
   em = await getTestEntityManager();
@@ -237,7 +239,14 @@ describe("clean-up of stored descriptions", () => {
         apply: false,
         log: quiet,
       })
-    ).toEqual({ entries: 2, restored: 0, alreadyRestored: 0, skipped: 0 });
+    ).toEqual({
+      entries: 2,
+      restored: 0,
+      alreadyRestored: 0,
+      skipped: 0,
+      notApplied: 0,
+      unresolved: 0,
+    });
     expect(await snapshot()).toEqual(cleaned);
 
     expect(
@@ -246,7 +255,14 @@ describe("clean-up of stored descriptions", () => {
         apply: true,
         log: quiet,
       })
-    ).toEqual({ entries: 2, restored: 2, alreadyRestored: 0, skipped: 0 });
+    ).toEqual({
+      entries: 2,
+      restored: 2,
+      alreadyRestored: 0,
+      skipped: 0,
+      notApplied: 0,
+      unresolved: 0,
+    });
     expect(await snapshot()).toEqual(before);
   });
 
@@ -262,7 +278,14 @@ describe("clean-up of stored descriptions", () => {
         apply: true,
         log: quiet,
       })
-    ).toEqual({ entries: 2, restored: 1, alreadyRestored: 0, skipped: 1 });
+    ).toEqual({
+      entries: 2,
+      restored: 1,
+      alreadyRestored: 0,
+      skipped: 1,
+      notApplied: 0,
+      unresolved: 0,
+    });
     const gitcoin = (await snapshot()).find((p) => p.id === "gitcoin-1")!;
     expect(gitcoin.descriptionHtml).toBe("<p>newer</p>");
   });
@@ -313,10 +336,12 @@ describe("interrupted and concurrent runs", () => {
       snapshot().then((s) => s.find((p) => p.id === id)!);
     expect((await row("gitcoin-1")).descriptionHtml).toBe("<p>newer</p>");
 
-    // ...and restoring the backup does not put the older value back over it.
+    // ...and restoring the backup does not put the older value back over it:
+    // the file records that the clean-up never changed this row.
     expect(await restoreAll(backupFile)).toMatchObject({
       restored: 0,
-      skipped: 1,
+      skipped: 0,
+      notApplied: 1,
     });
     expect((await row("gitcoin-1")).descriptionHtml).toBe("<p>newer</p>");
   });
@@ -379,11 +404,13 @@ describe("interrupted and concurrent runs", () => {
     jest.restoreAllMocks();
 
     expect(await snapshot()).toEqual(before);
-    // Nothing was changed, so restoring the backup has nothing to do.
+    // Nothing was changed, and the database confirms the transaction was
+    // rolled back, so restoring the backup has nothing to do.
     expect(await restoreAll(backupFile)).toMatchObject({
       restored: 0,
-      alreadyRestored: 2,
+      alreadyRestored: 0,
       skipped: 0,
+      notApplied: 2,
     });
     expect(await snapshot()).toEqual(before);
   });
@@ -420,6 +447,8 @@ describe("interrupted and concurrent runs", () => {
       restored: 0,
       alreadyRestored: 2,
       skipped: 0,
+      notApplied: 0,
+      unresolved: 0,
     });
     expect(await snapshot()).toEqual(before);
   });
@@ -661,5 +690,441 @@ describe("--source", () => {
     await expect(
       runCleanup(em.connection, { apply: false, source: "", log: quiet })
     ).rejects.toThrow("Unknown source");
+  });
+});
+
+// Lets a test decide what happens to each write to the backup file, and only
+// to that file: how many bytes the system accepts, or which error it raises.
+type WriteFault = (attempt: {
+  call: number;
+  bytes: Buffer;
+}) => number | Error | undefined;
+
+const faultyBackupWrites = (fault: WriteFault) => {
+  const realOpen = fs.openSync;
+  const realWrite = fs.writeSync as (...args: any[]) => number;
+  const fds = new Set<number>();
+  let call = 0;
+  jest.spyOn(fs, "openSync").mockImplementation(((...args: any[]) => {
+    const fd = (realOpen as any)(...args);
+    if (args[0] === backupFile) fds.add(fd);
+    return fd;
+  }) as any);
+  jest.spyOn(fs, "writeSync").mockImplementation(((
+    fd: number,
+    data: any,
+    ...rest: any[]
+  ) => {
+    if (!fds.has(fd)) return realWrite(fd, data, ...rest);
+    const all = Buffer.isBuffer(data) ? data : Buffer.from(String(data));
+    const offset = Buffer.isBuffer(data) ? (rest[0] ?? 0) : 0;
+    const length = Buffer.isBuffer(data)
+      ? (rest[1] ?? all.length - offset)
+      : all.length;
+    const bytes = all.subarray(offset, offset + length);
+    const outcome = fault({ call: ++call, bytes });
+    if (outcome instanceof Error) throw outcome;
+    const accepted = outcome === undefined ? bytes.length : outcome;
+    return accepted === 0 ? 0 : realWrite(fd, bytes, 0, accepted);
+  }) as any);
+};
+
+const diskFull = () =>
+  Object.assign(new Error("ENOSPC: no space left on device, write"), {
+    code: "ENOSPC",
+  });
+
+describe("writing the backup", () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  test("a write the system only partly accepts is carried on to the end", async () => {
+    const before = await snapshot();
+    faultyBackupWrites(({ bytes }) => Math.min(bytes.length, 17));
+    const report = await runCleanup(em.connection, {
+      apply: true,
+      backupFile,
+      log: quiet,
+    });
+    jest.restoreAllMocks();
+
+    expect(report).toMatchObject({ updated: 2 });
+    // Every entry is complete: the file restores everything it changed.
+    expect(await readBackup(backupFile, quiet)).toHaveLength(2);
+    expect(
+      await runRestore(em.connection, {
+        file: backupFile,
+        apply: true,
+        log: quiet,
+      })
+    ).toMatchObject({ entries: 2, restored: 2 });
+    expect(await snapshot()).toEqual(before);
+  });
+
+  test("a full disk stops the run before any row is changed", async () => {
+    const before = await snapshot();
+    faultyBackupWrites(() => diskFull());
+    await expect(
+      runCleanup(em.connection, { apply: true, backupFile, log: quiet })
+    ).rejects.toThrow("ENOSPC");
+    jest.restoreAllMocks();
+    expect(await snapshot()).toEqual(before);
+  });
+
+  test("a disk that fills up half-way through the backup changes no row", async () => {
+    const before = await snapshot();
+    faultyBackupWrites(({ call, bytes }) =>
+      call === 1 ? Math.floor(bytes.length / 2) : diskFull()
+    );
+    await expect(
+      runCleanup(em.connection, { apply: true, backupFile, log: quiet })
+    ).rejects.toThrow("ENOSPC");
+    jest.restoreAllMocks();
+
+    expect(await snapshot()).toEqual(before);
+    // The half-written file is harmless: it restores nothing.
+    expect(
+      await runRestore(em.connection, {
+        file: backupFile,
+        apply: true,
+        log: quiet,
+      })
+    ).toMatchObject({ restored: 0 });
+    expect(await snapshot()).toEqual(before);
+  });
+
+  test("a write that accepts nothing fails instead of looping or going on", async () => {
+    const before = await snapshot();
+    let calls = 0;
+    faultyBackupWrites(() => {
+      calls++;
+      return 0;
+    });
+    await expect(
+      runCleanup(em.connection, { apply: true, backupFile, log: quiet })
+    ).rejects.toThrow(/backup/i);
+    jest.restoreAllMocks();
+    expect(calls).toBe(1);
+    expect(await snapshot()).toEqual(before);
+  });
+
+  test("a backup that cannot be flushed to disk changes no row", async () => {
+    const before = await snapshot();
+    jest.spyOn(fs, "fsyncSync").mockImplementation(() => {
+      throw new Error("EIO: i/o error, fsync");
+    });
+    await expect(
+      runCleanup(em.connection, { apply: true, backupFile, log: quiet })
+    ).rejects.toThrow("EIO");
+    jest.restoreAllMocks();
+    expect(await snapshot()).toEqual(before);
+  });
+
+  test("a failure in a later batch's backup keeps earlier batches restorable", async () => {
+    const before = await snapshot();
+    // One row per batch; the disk fills when the second batch is recorded.
+    let entryWrites = 0;
+    faultyBackupWrites(({ bytes }) => {
+      if (bytes.toString().includes('"before"')) entryWrites++;
+      return entryWrites >= 2 ? diskFull() : undefined;
+    });
+    await expect(
+      runCleanup(em.connection, {
+        apply: true,
+        backupFile,
+        batchSize: 1,
+        log: quiet,
+      })
+    ).rejects.toThrow("ENOSPC");
+    jest.restoreAllMocks();
+
+    const rows = await snapshot();
+    expect(rows.find((p) => p.id === "gitcoin-1")!.descriptionHtml).toBe(
+      CLEAN_HTML
+    );
+    expect(rows.find((p) => p.id === "giveth-1")!.description).toBe(DIRTY_HTML);
+    expect(
+      await runRestore(em.connection, {
+        file: backupFile,
+        apply: true,
+        log: quiet,
+      })
+    ).toMatchObject({ restored: 1 });
+    expect(await snapshot()).toEqual(before);
+  });
+});
+
+// The backup is written before the rows are, so it also lists rows the
+// clean-up then did not change. Restoring must leave those alone - even when
+// they have since come to hold exactly what the clean-up meant to write,
+// which is what the importer stores for the same source data.
+describe("restore only reverts what the clean-up committed", () => {
+  const withHook = (hook: () => Promise<void> | void): DataSource =>
+    new Proxy(em.connection, {
+      get(target, property) {
+        if (property === "transaction") {
+          return async (work: any) => {
+            await hook();
+            return target.transaction(work);
+          };
+        }
+        const value = Reflect.get(target, property, target);
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    });
+  const restore = (apply = true, log: (line: string) => void = quiet) =>
+    runRestore(em.connection, { file: backupFile, apply, log });
+  const row = async (id: string) =>
+    (await snapshot()).find((p) => p.id === id)!;
+  // What the importer stores for unchanged source data: the sanitized values.
+  const importerWrites = async (ids?: string[]) => {
+    for (const entry of await readBackup(backupFile, quiet)) {
+      if (ids && !ids.includes(entry.id)) continue;
+      await em.getRepository(Project).update({ id: entry.id }, entry.after);
+    }
+  };
+  // A transaction id whose transaction was rolled back.
+  const abortedTxid = async (): Promise<string> => {
+    const runner = em.connection.createQueryRunner();
+    try {
+      await runner.startTransaction();
+      const [{ txid }] = await runner.query(
+        "SELECT txid_current()::text AS txid"
+      );
+      await runner.rollbackTransaction();
+      return txid;
+    } finally {
+      await runner.release();
+    }
+  };
+  const entryLines = () =>
+    fs
+      .readFileSync(backupFile, "utf8")
+      .split("\n")
+      .filter((line) => line.includes('"before"'));
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  test("a row skipped as concurrently changed is not reverted once the importer sanitizes it", async () => {
+    const dataSource = withHook(async () => {
+      await em
+        .getRepository(Project)
+        .update({ id: "gitcoin-1" }, { descriptionHtml: "<p>newer</p>" });
+    });
+    expect(
+      await runCleanup(dataSource, { apply: true, backupFile, log: quiet })
+    ).toMatchObject({ updated: 1, skippedConcurrent: 1 });
+
+    // The source goes back to the old text; the importer stores it sanitized.
+    await importerWrites(["gitcoin-1"]);
+    expect((await row("gitcoin-1")).descriptionHtml).toBe(CLEAN_HTML);
+
+    const report = await restore();
+    expect(report).toMatchObject({ restored: 1 });
+    // giveth-1 was cleaned by the script and is put back...
+    expect((await row("giveth-1")).description).toBe(DIRTY_HTML);
+    // ...gitcoin-1 never was, and keeps what the importer wrote.
+    expect((await row("gitcoin-1")).descriptionHtml).toBe(CLEAN_HTML);
+    expect(report).toMatchObject({ notApplied: 1, skipped: 0 });
+  });
+
+  test("a batch that was rolled back is not reverted once the importer sanitizes its rows", async () => {
+    const original = em.connection.transaction.bind(em.connection);
+    jest
+      .spyOn(em.connection, "transaction")
+      .mockImplementation(async (work: any) =>
+        original(async (manager: EntityManager) => {
+          await work(manager);
+          throw new Error("commit failed");
+        })
+      );
+    await expect(
+      runCleanup(em.connection, { apply: true, backupFile, log: quiet })
+    ).rejects.toThrow("commit failed");
+    jest.restoreAllMocks();
+
+    await importerWrites();
+    const imported = await snapshot();
+    expect(await restore()).toMatchObject({ restored: 0, notApplied: 2 });
+    expect(await snapshot()).toEqual(imported);
+  });
+
+  test("a batch whose transaction never started is not reverted either", async () => {
+    const dataSource = withHook(() => {
+      throw new Error("connection lost");
+    });
+    await expect(
+      runCleanup(dataSource, { apply: true, backupFile, log: quiet })
+    ).rejects.toThrow("connection lost");
+
+    await importerWrites();
+    const imported = await snapshot();
+    expect(await restore()).toMatchObject({ restored: 0, notApplied: 2 });
+    expect(await snapshot()).toEqual(imported);
+  });
+
+  test("a crash after the commit, before it is recorded, loses nothing", async () => {
+    const before = await snapshot();
+    // The batch is recorded, its transaction commits, and the process dies
+    // before the line that says so reaches the file.
+    faultyBackupWrites(({ bytes }) =>
+      bytes.toString().includes('"committed"') ? diskFull() : undefined
+    );
+    await expect(
+      runCleanup(em.connection, { apply: true, backupFile, log: quiet })
+    ).rejects.toThrow("ENOSPC");
+    jest.restoreAllMocks();
+
+    const cleaned = await snapshot();
+    expect(cleaned.find((p) => p.id === "giveth-1")!.description).toBe(
+      CLEAN_HTML
+    );
+    expect(fs.readFileSync(backupFile, "utf8")).not.toContain('"committed"');
+
+    // The database still knows the transaction committed.
+    expect(await restore(false)).toMatchObject({ entries: 2, restored: 0 });
+    expect(await snapshot()).toEqual(cleaned);
+    expect(await restore()).toMatchObject({ restored: 2, notApplied: 0 });
+    expect(await snapshot()).toEqual(before);
+  });
+
+  test("a batch whose outcome cannot be recorded is rolled back", async () => {
+    const before = await snapshot();
+    // The rows are updated inside the transaction; the record of which ones
+    // were skipped must reach the disk before it may commit.
+    faultyBackupWrites(({ bytes }) =>
+      bytes.toString().includes('"prepared"') ? diskFull() : undefined
+    );
+    await expect(
+      runCleanup(em.connection, { apply: true, backupFile, log: quiet })
+    ).rejects.toThrow("ENOSPC");
+    jest.restoreAllMocks();
+
+    expect(await snapshot()).toEqual(before);
+    expect(await restore()).toMatchObject({ restored: 0, notApplied: 2 });
+    expect(await snapshot()).toEqual(before);
+  });
+
+  test("a crash before the commit is told apart from one after it", async () => {
+    // Same file contents as the test above - entries and the intent to
+    // commit, no completion - but this transaction was rolled back.
+    const txid = await abortedTxid();
+    const lines = entryLines;
+    await runCleanup(em.connection, { apply: true, backupFile, log: quiet });
+    const batch = JSON.parse(lines()[0]).batch;
+    expect(batch).toEqual(expect.any(String));
+    fs.writeFileSync(
+      backupFile,
+      [
+        ...lines(),
+        JSON.stringify({ batch, prepared: { txid, skipped: [] } }),
+        "",
+      ].join("\n")
+    );
+    // The rows hold the cleaned values, as if the importer had written them.
+    const imported = await snapshot();
+
+    expect(await restore()).toMatchObject({ restored: 0, notApplied: 2 });
+    expect(await snapshot()).toEqual(imported);
+  });
+
+  test("a batch whose outcome cannot be established is left alone and reported", async () => {
+    await runCleanup(em.connection, { apply: true, backupFile, log: quiet });
+    const batch = JSON.parse(entryLines()[0]).batch;
+    fs.writeFileSync(
+      backupFile,
+      [
+        ...entryLines(),
+        // No such transaction in this database (another server, or a status
+        // the database no longer keeps).
+        JSON.stringify({
+          batch,
+          prepared: { txid: "99999999999", skipped: [] },
+        }),
+        "",
+      ].join("\n")
+    );
+    const cleaned = await snapshot();
+    const lines: string[] = [];
+    const report = await restore(true, (line) => lines.push(line));
+    expect(report).toMatchObject({ restored: 0, unresolved: 2 });
+    expect(lines.filter((line) => line.startsWith("UNRESOLVED"))).toHaveLength(
+      2
+    );
+    expect(await snapshot()).toEqual(cleaned);
+  });
+
+  test("a dry run reports the same decisions and writes nothing", async () => {
+    const dataSource = withHook(async () => {
+      await em
+        .getRepository(Project)
+        .update({ id: "gitcoin-1" }, { descriptionHtml: "<p>newer</p>" });
+    });
+    await runCleanup(dataSource, { apply: true, backupFile, log: quiet });
+    const cleaned = await snapshot();
+    const lines: string[] = [];
+    expect(await restore(false, (line) => lines.push(line))).toMatchObject({
+      entries: 2,
+      restored: 0,
+      notApplied: 1,
+    });
+    expect(lines).toContain("WOULD RESTORE giveth-1");
+    expect(lines.some((line) => line.includes("WOULD RESTORE gitcoin-1"))).toBe(
+      false
+    );
+    expect(await snapshot()).toEqual(cleaned);
+  });
+
+  test("restoring is repeatable and never touches the rows it left alone", async () => {
+    const dataSource = withHook(async () => {
+      await em
+        .getRepository(Project)
+        .update({ id: "gitcoin-1" }, { descriptionHtml: "<p>newer</p>" });
+    });
+    await runCleanup(dataSource, { apply: true, backupFile, log: quiet });
+    await importerWrites(["gitcoin-1"]);
+
+    expect(await restore()).toMatchObject({ restored: 1, notApplied: 1 });
+    const restored = await snapshot();
+    for (let run = 0; run < 2; run++) {
+      expect(await restore()).toMatchObject({
+        restored: 0,
+        alreadyRestored: 1,
+        notApplied: 1,
+      });
+      expect(await snapshot()).toEqual(restored);
+    }
+  });
+
+  test("a row imported after a committed clean-up is still not overwritten", async () => {
+    await runCleanup(em.connection, { apply: true, backupFile, log: quiet });
+    await em
+      .getRepository(Project)
+      .update({ id: "gitcoin-1" }, { descriptionHtml: "<p>newer</p>" });
+    expect(await restore()).toMatchObject({
+      restored: 1,
+      skipped: 1,
+      notApplied: 0,
+    });
+    expect((await row("gitcoin-1")).descriptionHtml).toBe("<p>newer</p>");
+  });
+
+  test("a backup written before outcomes were recorded restores as it used to", async () => {
+    const before = await snapshot();
+    await runCleanup(em.connection, { apply: true, backupFile, log: quiet });
+    fs.writeFileSync(
+      backupFile,
+      entryLines()
+        .map((line) => {
+          const { batch: _batch, ...entry } = JSON.parse(line);
+          return JSON.stringify(entry);
+        })
+        .join("\n") + "\n"
+    );
+    expect(await restore()).toMatchObject({ restored: 2, notApplied: 0 });
+    expect(await snapshot()).toEqual(before);
   });
 });
