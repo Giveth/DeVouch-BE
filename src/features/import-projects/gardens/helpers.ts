@@ -64,6 +64,8 @@ export const processProjectsBatch = async (
       description: descriptionStr,
       url: generateGardenUrl(project),
       image: convertIpfsHashToHttps(GARDEN_IMAGE_CID),
+      // Showdown passes any HTML in the source text through untouched. The
+      // result is sanitized by `updateOrCreateProject` before it is stored.
       descriptionHtml: descriptionStr
         ? converter.makeHtml(descriptionStr)
         : undefined,

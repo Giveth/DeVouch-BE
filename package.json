@@ -2,6 +2,9 @@
   "name": "devouch-squid-backend",
   "version": "1.0.0",
   "private": true,
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "scripts": {
     "build": "rm -rf lib && tsc",
     "prettier:write": "prettier --write **/*.ts",
@@ -11,7 +14,8 @@
     "clear:generate:migration:run:locally": "sqd codegen ; docker compose -f docker-compose-potgres.yml down -v;docker compose -f docker-compose-potgres.yml up -d;sqd migration:generate; sqd run",
     "clear:run:locally": "sqd build ; docker compose -f docker-compose-potgres.yml down -v;docker compose -f docker-compose-potgres.yml up -d; sqd run",
     "run:locally": "docker compose -f docker-compose-potgres.yml up -d; sqd build; sqd run",
-    "add-organization": "node add-organisation.js"
+    "add-organization": "node add-organisation.js",
+    "sanitize-descriptions": "node --require=dotenv/config lib/scripts/sanitizeProjectDescriptions.js"
   },
   "dependencies": {
     "@ethereum-attestation-service/eas-sdk": "^2.10.0",
@@ -27,6 +31,7 @@
     "jsonc-parser": "^3.3.1",
     "node-cron": "^4.6.0",
     "pg": "^8.23.0",
+    "sanitize-html": "^2.18.2",
     "showdown": "^2.1.0",
     "type-graphql": "^1.2.0-rc.1",
     "typeorm": "^0.3.31",
@@ -39,6 +44,7 @@
     "@types/html-to-text": "^9.0.4",
     "@types/jest": "^30.0.0",
     "@types/node": "^22.20.2",
+    "@types/sanitize-html": "^2.16.2",
     "@types/showdown": "^2.0.6",
     "jest": "^30.5.1",
     "prettier": "^3.9.6",

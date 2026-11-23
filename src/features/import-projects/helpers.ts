@@ -9,6 +9,10 @@ import {
   ProjectImportOutcome,
   SourceConfig,
 } from "./types";
+import {
+  isUnsanitizedFormOf,
+  sanitizeDescriptionFields,
+} from "./sanitizeDescription";
 
 // The primary key an imported project is stored under. Shared with the
 // reconciliation pass on purpose: it compares stored ids against ids derived
@@ -150,6 +154,10 @@ const areTimestampsEqual = (
   return new Date(timestamp1).getTime() === new Date(timestamp2).getTime();
 };
 
+// A column that holds NULL reads back as `null`, while a field the source did
+// not send is `undefined`. The two are the same "no value": an update cannot
+// turn one into the other, so treating them as different would rewrite the
+// row on every import.
 const areValuesEqual = (
   value1: string | null | undefined,
   value2: string | null | undefined
@@ -169,6 +177,7 @@ export const updateOrCreateProject = async (
     idField,
     titleField,
     descriptionField,
+    descriptionFormat,
     descriptionHtmlField,
     urlField,
     imageField,
@@ -226,10 +235,22 @@ export const updateOrCreateProject = async (
   }
 
   const title = project[titleField];
-  const description = project[descriptionField];
   const url = project[urlField];
   const image = project[imageField];
-  const descriptionHtml = descriptionHtmlField && project[descriptionHtmlField];
+  // Descriptions are written by whoever registered the project on the source
+  // platform. Their HTML is sanitized here, at the single point every importer
+  // persists through, so no source can store markup that was not filtered.
+  // The change detection below compares these sanitized values, which keeps an
+  // up-to-date row "unchanged" and rewrites a row stored before sanitization.
+  const { description, descriptionHtml } = sanitizeDescriptionFields(
+    {
+      description: project[descriptionField],
+      descriptionHtml: descriptionHtmlField
+        ? project[descriptionHtmlField]
+        : undefined,
+    },
+    descriptionFormat
+  );
   const rfRound = rfRoundField && project[rfRoundField];
   const sourceCreatedAt = sourceCreatedAtField && project[sourceCreatedAtField];
 
@@ -238,37 +259,64 @@ export const updateOrCreateProject = async (
     return "skipped";
   }
 
-  const descriptionSummary = getHtmlTextSummary(descriptionHtml || description);
+  const descriptionSummary = getHtmlTextSummary(
+    descriptionHtml || description || ""
+  );
 
   if (existingProject) {
     const changes: string[] = [];
+    // Whether anything changed at the source. A row whose stored markup is
+    // merely being replaced by its sanitized form is still written, but it
+    // is not a project update: it keeps its `lastUpdatedTimestamp`, which the
+    // listings sort by.
+    let sourceChanged = false;
+    const record = (change: string, fromSource: boolean = true) => {
+      changes.push(change);
+      if (fromSource) sourceChanged = true;
+    };
+    const length = (value: unknown) =>
+      typeof value === "string" ? `${value.length} chars` : String(value);
 
     // Check for specific field changes and log them
-    if (existingProject.title !== title)
-      changes.push(`title: "${existingProject.title}" -> "${title}"`);
-    if (existingProject.description !== description)
-      changes.push(
-        `description: "${existingProject.description}" -> "${description}"`
+    if (!areValuesEqual(existingProject.title, title))
+      record(`title: "${existingProject.title}" -> "${title}"`);
+    // Descriptions are logged by size, not content: they run to megabytes.
+    if (!areValuesEqual(existingProject.description, description))
+      record(
+        `description changed (${length(existingProject.description)} -> ${length(
+          description
+        )})`,
+        descriptionFormat !== "html" ||
+          !isUnsanitizedFormOf(existingProject.description, description)
       );
-    if (existingProject.url !== url)
-      changes.push(`url: "${existingProject.url}" -> "${url}"`);
-    if (existingProject.image !== image)
-      changes.push(`image: "${existingProject.image}" -> "${image}"`);
+    if (!areValuesEqual(existingProject.url, url))
+      record(`url: "${existingProject.url}" -> "${url}"`);
+    if (!areValuesEqual(existingProject.image, image))
+      record(`image: "${existingProject.image}" -> "${image}"`);
     if (!areValuesEqual(existingProject.descriptionHtml, descriptionHtml))
-      changes.push(`descriptionHtml changed`);
-    if (!existingProject.descriptionSummary && description)
-      changes.push(`descriptionSummary set`);
+      record(
+        `descriptionHtml changed`,
+        !isUnsanitizedFormOf(existingProject.descriptionHtml, descriptionHtml)
+      );
+    // The summary is derived from the description, so it is compared with
+    // the value it should hold rather than tested for being empty: a
+    // description with no text (an image, a video, an empty paragraph) has an
+    // empty summary and is up to date. A summary that is merely stale is
+    // rewritten without counting as a change at the source - when the
+    // description itself changed, that was recorded above.
+    if ((existingProject.descriptionSummary ?? "") !== descriptionSummary)
+      record(`descriptionSummary changed`, false);
     if (!areTimestampsEqual(existingProject.sourceCreatedAt, sourceCreatedAt))
-      changes.push(
+      record(
         `sourceCreatedAt: "${existingProject.sourceCreatedAt}" -> "${sourceCreatedAt}"`
       );
     if (rfRound && !existingProject.rfRounds?.some((rfr) => rfr === rfRound)) {
-      changes.push(`rfRound added: "${rfRound}"`);
+      record(`rfRound added: "${rfRound}"`);
     }
     // A project the source lists again must return to the listings. Without
     // this the update below is never issued for a hidden project whose other
     // fields are unchanged, so it would stay hidden forever after one absence.
-    if (!existingProject.imported) changes.push(`imported: false -> true`);
+    if (!existingProject.imported) record(`imported: false -> true`);
 
     if (changes.length === 0) {
       // Up to date: no SQL is issued, so this must not be counted as a write.
@@ -282,17 +330,23 @@ export const updateOrCreateProject = async (
         rfRoundsSet.add(rfRound);
       }
 
+      // A field the source no longer sends is `undefined`, and an update
+      // leaves an undefined column as it is. The old value would then stay
+      // in the row and be found "changed" again by every later import, so a
+      // missing value is written as NULL.
       const updatedProject = {
         ...existingProject,
-        title,
-        description,
-        image,
-        url,
-        descriptionHtml,
+        title: title ?? null,
+        description: description ?? null,
+        image: image ?? null,
+        url: url ?? null,
+        descriptionHtml: descriptionHtml ?? null,
         descriptionSummary,
-        lastUpdatedTimestamp: new Date(),
+        lastUpdatedTimestamp: sourceChanged
+          ? new Date()
+          : existingProject.lastUpdatedTimestamp,
         rfRounds: Array.from(rfRoundsSet),
-        sourceCreatedAt,
+        sourceCreatedAt: sourceCreatedAt ?? null,
         imported: true,
       };
 
@@ -357,7 +411,7 @@ export const updateOrCreateProject = async (
   }
 };
 
-const getHtmlTextSummary = (
+export const getHtmlTextSummary = (
   html: string = "",
   lengthLimit: number = DESCRIPTION_SUMMARY_LENGTH
 ): string => {

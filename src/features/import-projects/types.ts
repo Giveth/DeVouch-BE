@@ -1,3 +1,5 @@
+import type { DescriptionFormat } from "./sanitizeDescription";
+
 // What `updateOrCreateProject` actually did. A boolean could not distinguish
 // "wrote a row" from "inspected an unchanged row and issued no SQL", which made
 // any count built on it unusable for detecting a database that accepts reads
@@ -41,6 +43,13 @@ export interface SourceConfig {
   idField: string;
   titleField: string;
   descriptionField: string;
+  /**
+   * What the source puts in `descriptionField`. "html" is sanitized before it
+   * is stored; "text" (the default) is plain text or markdown and is stored
+   * verbatim. See `sanitizeDescription.ts`.
+   */
+  descriptionFormat?: DescriptionFormat;
+  /** Always HTML, always sanitized before it is stored. */
   descriptionHtmlField?: string;
   urlField: string;
   imageField: string;
