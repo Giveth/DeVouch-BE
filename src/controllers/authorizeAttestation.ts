@@ -42,7 +42,7 @@ export const handleAuthorize = async (
     attestTimestamp: new Date(log.block.timestamp),
   });
 
-  ctx.store.upsert(attestorOrganisation);
+  await ctx.store.upsert(attestorOrganisation);
 
   ctx.log.debug(
     `Attestor ${accountAddress} authorized for organisation ${

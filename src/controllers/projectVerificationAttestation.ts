@@ -10,9 +10,14 @@ import {
   getAttestor,
   getOrCreateAttestorOrganisation,
   getProject,
+  getReferencedAttestorOrganisation,
+  isAuthorizationOwner,
   updateProjectAttestationCounts,
 } from "./utils/modelHelper";
-import { parseAttestationData } from "./utils/projectVerificationHelper";
+import {
+  getUnstorableReason,
+  parseAttestationData,
+} from "./utils/projectVerificationHelper";
 
 export const handleProjectAttestation = async (
   ctx: DataHandlerContext<Store>,
@@ -30,18 +35,11 @@ export const handleProjectAttestation = async (
     schemaUid
   );
 
-  const attestor = await getAttestor(ctx, issuer);
-
-  const attestorOrganisation = await getOrCreateAttestorOrganisation(
-    ctx,
-    attestor,
-    refUID,
-    new Date(log.block.timestamp)
-  );
-
-  if (!attestorOrganisation) {
-    ctx.log.debug(
-      `Attestor ${issuer} is not part of any organisation with ref UI ${refUID}`
+  // Everything below up to getAttestor only reads: an attestation that is
+  // skipped must leave the database untouched.
+  if (!decodedData) {
+    ctx.log.warn(
+      `Skipping project attestation ${uid} from ${issuer}: data does not match the schema`
     );
     return;
   }
@@ -58,6 +56,45 @@ export const handleProjectAttestation = async (
     projectVerificationAttestation: ${projectVerificationAttestation} 
     `);
     throw new Error("Error parsing project verification attestation");
+  }
+
+  const unstorableReason = getUnstorableReason(projectVerificationAttestation);
+  if (unstorableReason) {
+    ctx.log.warn(
+      `Skipping project attestation ${uid} from ${issuer}: ${unstorableReason}`
+    );
+    return;
+  }
+
+  // The referenced authorization must be the issuer's own.
+  const referencedAuthorization = await getReferencedAttestorOrganisation(
+    ctx,
+    refUID
+  );
+  if (
+    referencedAuthorization &&
+    !isAuthorizationOwner(referencedAuthorization, issuer)
+  ) {
+    ctx.log.warn(
+      `Skipping project attestation ${uid} from ${issuer}: refUID ${refUID} is the authorization of ${referencedAuthorization.attestor.id}`
+    );
+    return;
+  }
+
+  const attestor = await getAttestor(ctx, issuer);
+
+  const attestorOrganisation = await getOrCreateAttestorOrganisation(
+    ctx,
+    attestor,
+    referencedAuthorization,
+    new Date(log.block.timestamp)
+  );
+
+  if (!attestorOrganisation) {
+    ctx.log.debug(
+      `Attestor ${issuer} is not part of any organisation with ref UI ${refUID}`
+    );
+    return;
   }
 
   ctx.log.debug(`Processing project attestation with uid: ${uid}`);

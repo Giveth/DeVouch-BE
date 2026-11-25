@@ -27,7 +27,7 @@ export const upsertOrganisatoinProject = async (
     vouch,
     count,
   });
-  ctx.store.upsert(organisationProject);
+  await ctx.store.upsert(organisationProject);
 };
 
 export const updateProjectAttestationCounts = async (
@@ -185,26 +185,48 @@ export const getProjectStats = async (
   return ProjectStats.parse(result[0]);
 };
 
+// The organisation authorization a project attestation refers to, if its
+// refUID names one. Read-only.
+export const getReferencedAttestorOrganisation = async (
+  ctx: DataHandlerContext<Store>,
+  refUID?: string
+): Promise<AttestorOrganisation | undefined> => {
+  // Check if refUID is valid and not a placeholder for an empty reference
+  if (!refUID || refUID === ZERO_UID) return undefined;
+
+  return ctx.store.get(AttestorOrganisation, {
+    where: { id: refUID.toLowerCase() },
+    relations: { organisation: true, attestor: true },
+  });
+};
+
+// An authorization can only be used by the account it was issued to. refUID
+// is chosen freely by whoever attests, so it proves nothing by itself.
+export const isAuthorizationOwner = (
+  attestorOrganisation: AttestorOrganisation,
+  address: string
+): boolean =>
+  attestorOrganisation.attestor.id.toLowerCase() === address.toLowerCase();
+
+// `referencedAuthorization` is what getReferencedAttestorOrganisation found
+// for the attestation's refUID: the caller looks it up once, before it writes
+// anything, and passes it on.
 export const getOrCreateAttestorOrganisation = async (
   ctx: DataHandlerContext<Store>,
   attestor: Attestor,
-  refUID?: string,
+  referencedAuthorization?: AttestorOrganisation,
   attestTimestamp?: Date
 ): Promise<AttestorOrganisation | undefined> => {
-  // Check if refUID is valid and not a placeholder for an empty reference
-  if (refUID && refUID !== ZERO_UID) {
-    // Attempt to find existing AttestorOrganisation
-    const attestorOrganisation = await ctx.store.get(AttestorOrganisation, {
-      where: { id: refUID.toLowerCase() },
-      relations: { organisation: true, attestor: true },
-    });
-
-    if (attestorOrganisation) {
-      ctx.log.debug(
-        `Found existing attestorOrganisation: ${attestorOrganisation}`
-      );
-      return attestorOrganisation;
+  if (referencedAuthorization) {
+    // Never hand out, nor downgrade to No Affiliation, another account's
+    // authorization.
+    if (!isAuthorizationOwner(referencedAuthorization, attestor.id)) {
+      return undefined;
     }
+    ctx.log.debug(
+      `Found existing attestorOrganisation: ${referencedAuthorization}`
+    );
+    return referencedAuthorization;
   }
 
   // Attempt to retrieve default organisation
