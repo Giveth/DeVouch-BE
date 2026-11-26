@@ -41,6 +41,43 @@ export const checkProjectAttestation = async (
   return attestorOrganisation;
 };
 
+// Longest project key (`<source>-<projectId>`, built by getProject), in UTF-8
+// bytes, that every index it ends up in can hold.
+//
+// PostgreSQL refuses a B-tree index entry above 2704 bytes, header included.
+// Measured on PostgreSQL 14, a text key that does not compress fits up to
+// 2692 bytes and fails at 2693. The tightest index is not the `project`
+// primary key but the `organisation_project` one: upsertOrganisatoinProject
+// builds that id as `<project key>-<organisation id>-vouch`, which is 73 bytes
+// longer than the project key (two hyphens, a 66-character organisation id and
+// "vouch"). At this limit the id is 2673 bytes, 19 below the ceiling.
+//
+// This assumes organisation ids stay 66 characters (schema UIDs) and the
+// suffix keeps its shape. If either grows, this limit has to shrink with it.
+export const MAX_PROJECT_KEY_BYTES = 2600;
+
+// Why PostgreSQL could not store this attestation, or undefined if it can.
+// EAS accepts any strings, so these are checked before anything is written.
+export const getUnstorableReason = (
+  attestation: ProjectVerificationAttestation
+): string | undefined => {
+  const { projectSource, projectId, comment } = attestation;
+
+  // PostgreSQL text cannot hold the NUL character.
+  for (const [name, value] of Object.entries({
+    projectSource,
+    projectId,
+    comment,
+  })) {
+    if (value?.includes("\u0000")) return `${name} contains a NUL character`;
+  }
+
+  const projectKey = `${projectSource.toLocaleLowerCase()}-${projectId}`;
+  if (Buffer.byteLength(projectKey, "utf8") > MAX_PROJECT_KEY_BYTES) {
+    return `project key is longer than ${MAX_PROJECT_KEY_BYTES} bytes`;
+  }
+};
+
 export const parseAttestationData = (
   decodedData: SchemaDecodedItem[]
 ): ZodSafeParseResult<ProjectVerificationAttestation> => {

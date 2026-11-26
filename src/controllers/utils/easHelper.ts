@@ -37,7 +37,8 @@ export const getAttestationData = async (
   attestationUid: string,
   schemaUid: string
 ): Promise<{
-  decodedData: SchemaDecodedItem[];
+  // Undefined when the attestation's data does not decode with its schema.
+  decodedData: SchemaDecodedItem[] | undefined;
   refUID: string;
 }> => {
   const easContract = new EASContract.Contract(
@@ -46,10 +47,37 @@ export const getAttestationData = async (
     EAS_CONTRACT_ADDRESS
   );
 
-  const { data, refUID } = await easContract.getAttestation(attestationUid);
+  const {
+    uid: returnedUid,
+    schema: returnedSchema,
+    data,
+    refUID,
+  } = await easContract.getAttestation(attestationUid);
+
+  // EAS answers an unknown uid with an all-zero attestation instead of
+  // reverting. That, or any answer that is not the attestation the event
+  // announced, is a fault of the node (lagging, wrong block), not of the
+  // payload: throw so the batch is retried rather than the attestation lost.
+  if (
+    returnedUid.toLowerCase() !== attestationUid.toLowerCase() ||
+    returnedSchema.toLowerCase() !== schemaUid.toLowerCase()
+  ) {
+    throw new Error(
+      `EAS returned attestation ${returnedUid} with schema ${returnedSchema} for attestation ${attestationUid} with schema ${schemaUid}`
+    );
+  }
+
   const schemaEncoder = await getEasSchemaEncoder(ctx, block, schemaUid);
 
-  const decodedData = schemaEncoder.decodeData(data);
+  // EAS does not check `data` against the schema, so anyone can attest with
+  // bytes that do not decode. Only the decoding is guarded: it is pure, so
+  // nothing but the payload can make it throw. The RPC calls above are not.
+  let decodedData: SchemaDecodedItem[] | undefined;
+  try {
+    decodedData = schemaEncoder.decodeData(data);
+  } catch {
+    decodedData = undefined;
+  }
   return {
     decodedData,
     refUID,
