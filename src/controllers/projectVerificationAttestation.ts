@@ -58,7 +58,20 @@ export const handleProjectAttestation = async (
     throw new Error("Error parsing project verification attestation");
   }
 
-  const unstorableReason = getUnstorableReason(projectVerificationAttestation);
+  let projectId = projectVerificationAttestation.projectId;
+  let projectSource = projectVerificationAttestation.projectSource;
+
+  if (projectVerificationAttestation.projectSource === "rf4") {
+    projectId = projectVerificationAttestation.projectId.replace("rf4-", "rf-");
+    projectSource = "rf";
+  }
+
+  // Checked on the normalized values: they are what gets stored.
+  const unstorableReason = getUnstorableReason({
+    ...projectVerificationAttestation,
+    projectSource,
+    projectId,
+  });
   if (unstorableReason) {
     ctx.log.warn(
       `Skipping project attestation ${uid} from ${issuer}: ${unstorableReason}`
@@ -98,14 +111,6 @@ export const handleProjectAttestation = async (
   }
 
   ctx.log.debug(`Processing project attestation with uid: ${uid}`);
-
-  let projectId = projectVerificationAttestation.projectId;
-  let projectSource = projectVerificationAttestation.projectSource;
-
-  if (projectVerificationAttestation.projectSource === "rf4") {
-    projectId = projectVerificationAttestation.projectId.replace("rf4-", "rf-");
-    projectSource = "rf";
-  }
 
   const project = await getProject(ctx, projectSource, projectId);
 

@@ -557,6 +557,65 @@ describe("project attestation authorization", () => {
       expect(warnings).toHaveLength(1);
     });
 
+    // The handler stores source "rf4" as "rf" and turns "rf4-" in the project
+    // id into "rf-", so the stored key is two bytes shorter than the attested
+    // one. The limit applies to the stored key.
+    describe("an rf4 project key", () => {
+      // An rf4 attestation whose stored key is exactly `storedBytes` long.
+      const rf4 = (storedBytes: number) => {
+        const tail = incompressible(storedBytes - "rf-rf-".length);
+        const projectId = `rf4-${tail}`;
+        const storedKey = `rf-rf-${tail}`;
+        expect(Buffer.byteLength(storedKey, "utf8")).toBe(storedBytes);
+        expect(Buffer.byteLength(`rf4-${projectId}`, "utf8")).toBe(
+          storedBytes + 2
+        );
+        return { projectId, storedKey };
+      };
+
+      test.each([
+        ["over the limit as attested but under it as stored", -1],
+        ["of exactly the limit as stored", 0],
+      ])("%s is stored", async (_name, offset) => {
+        const { projectId, storedKey } = rf4(MAX_PROJECT_KEY_BYTES + offset);
+
+        const uid = await attest(
+          OUTSIDER,
+          ZERO_UID,
+          encode("rf4", projectId, true)
+        );
+
+        const state = await snapshot();
+        expect(state.attestations).toEqual([
+          {
+            id: uid,
+            vouch: true,
+            comment: "",
+            project_id: storedKey,
+            attestor_id: OUTSIDER.toLowerCase(),
+            organisation_id: ZERO_UID,
+          },
+        ]);
+        expect(state.counters).toEqual([
+          { id: `${storedKey}-${ZERO_UID}-vouch`, vouch: true, count: 1 },
+        ]);
+        expect(state.projects).toEqual([
+          { id: storedKey, total_vouches: 1, total_flags: 0, total_attests: 1 },
+        ]);
+        expect(warnings).toEqual([]);
+      });
+
+      test("one byte over the limit as stored is skipped", async () => {
+        const { projectId } = rf4(MAX_PROJECT_KEY_BYTES + 1);
+        const before = await snapshot();
+
+        await attest(OUTSIDER, ZERO_UID, encode("rf4", projectId, true));
+
+        expect(await snapshot()).toEqual(before);
+        expect(warnings).toHaveLength(1);
+      });
+    });
+
     test("a long comment is kept", async () => {
       const comment = "c".repeat(20_000);
       await attest(OUTSIDER, ZERO_UID, encode("giveth", "1", true, comment));
